@@ -1,4 +1,4 @@
-# ae-scripts
+# adobe-scripts
 
 Utility scripts for [Adobe After Effects](https://www.adobe.com/products/aftereffects.html) and [Adobe Illustrator](https://www.adobe.com/products/illustrator.html): rigging, timeline cleanup, markers, rendering, and layer ordering.
 
