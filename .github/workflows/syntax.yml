@@ -1,0 +1,18 @@
+name: Syntax check
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check .jsx syntax
+        run: |
+          status=0
+          while IFS= read -r f; do
+            sed 's/^#target.*//' "$f" > "$RUNNER_TEMP/check.js"
+            node --check "$RUNNER_TEMP/check.js" || { echo "::error file=$f::Syntax error"; status=1; }
+          done < <(find . -name '*.jsx' -not -path './.git/*')
+          exit $status

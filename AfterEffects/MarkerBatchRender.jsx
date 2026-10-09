@@ -1,3 +1,4 @@
+// Marker Batch Render v1.1.0 | Zenzuke | https://zenzuke.com/scripts/
 /**
  * Marker Batch Render
  * 
