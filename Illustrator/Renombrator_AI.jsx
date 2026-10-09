@@ -1,4 +1,5 @@
 #target illustrator
+// Renombrator v1.1.0 | Zenzuke | https://zenzuke.com/scripts/
 
 (function () {
     if (app.documents.length === 0) {

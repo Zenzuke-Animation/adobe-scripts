@@ -1,3 +1,4 @@
+// Project Folder Helper v1.1.0 | Zenzuke | https://zenzuke.com/scripts/
 (function(thisObj) {
     // --- LOGIC FUNCTIONS ---
 
@@ -73,15 +74,18 @@
         if (file) {
             file.open("r");
             app.beginUndoGroup("Import Folder Structure");
+            try {
             
-            while (!file.eof) {
-                var line = file.readln();
-                if (line !== "") {
-                    createFolderFromPath(line);
+                while (!file.eof) {
+                    var line = file.readln();
+                    if (line !== "") {
+                        createFolderFromPath(line);
+                    }
                 }
-            }
             
-            app.endUndoGroup();
+            } finally {
+                app.endUndoGroup();
+            }
             file.close();
             alert("Folders generated!");
         }

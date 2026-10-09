@@ -1,3 +1,4 @@
+// Sync Shy Layers v1.1.0 | Zenzuke | https://zenzuke.com/scripts/
 /**
  * Sync Shy Layers (Multi-Target with Progress)
  * 
@@ -122,36 +123,39 @@
             win.layout.layout(true);
 
             app.beginUndoGroup("Sync Shy Layers to Multiple");
+            try {
             
-            var totalUpdated = 0;
-            var sourceLayers = sourceComp.layers;
-            var shyMap = {};
+                var totalUpdated = 0;
+                var sourceLayers = sourceComp.layers;
+                var shyMap = {};
 
-            for (var i = 1; i <= sourceLayers.length; i++) {
-                var layer = sourceLayers[i];
-                shyMap[layer.name] = layer.shy;
-            }
+                for (var i = 1; i <= sourceLayers.length; i++) {
+                    var layer = sourceLayers[i];
+                    shyMap[layer.name] = layer.shy;
+                }
 
-            // Process with UI updates
-            for (var t = 0; t < targetComps.length; t++) {
-                var tComp = targetComps[t];
-                var tLayers = tComp.layers;
-                for (var j = 1; j <= tLayers.length; j++) {
-                    var tLayer = tLayers[j];
-                    if (shyMap.hasOwnProperty(tLayer.name)) {
-                        if (tLayer.shy !== shyMap[tLayer.name]) {
-                            tLayer.shy = shyMap[tLayer.name];
-                            totalUpdated++;
+                // Process with UI updates
+                for (var t = 0; t < targetComps.length; t++) {
+                    var tComp = targetComps[t];
+                    var tLayers = tComp.layers;
+                    for (var j = 1; j <= tLayers.length; j++) {
+                        var tLayer = tLayers[j];
+                        if (shyMap.hasOwnProperty(tLayer.name)) {
+                            if (tLayer.shy !== shyMap[tLayer.name]) {
+                                tLayer.shy = shyMap[tLayer.name];
+                                totalUpdated++;
+                            }
                         }
                     }
-                }
                 
-                // Update Progress
-                pBar.value = t + 1;
-                win.update(); 
-            }
+                    // Update Progress
+                    pBar.value = t + 1;
+                    win.update(); 
+                }
 
-            app.endUndoGroup();
+            } finally {
+                app.endUndoGroup();
+            }
             
             alert("Sync Complete!\nUpdated " + totalUpdated + " layers across " + targetComps.length + " composition(s).");
             

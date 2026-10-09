@@ -27,7 +27,7 @@ Documentation in English and Spanish: https://zenzuke.com/scripts/
 | Move And Trim | Aligns selected layers in time with the layer just below: matches its start and trims their duration to end together. | [MoveAndTrim.jsx](../../releases/latest/download/MoveAndTrim.jsx) |
 | Null Group | Creates a null at the average center of the selected unparented layers, spans it over their duration and parents them to it. | [NullGroup.jsx](../../releases/latest/download/NullGroup.jsx) |
 | Project Folder Helper | Exports the Project panel folder hierarchy to a .txt file and recreates the same structure in any project. | [ProjectFolderHelper.jsx](../../releases/latest/download/ProjectFolderHelper.jsx) |
-| PuppetPin Null Creator | Creates a null for each Puppet Pin, chains the nulls in a hierarchy and drives the pins with expressions. | [PupperPin_NullCreator.jsx](../../releases/latest/download/PupperPin_NullCreator.jsx) |
+| PuppetPin Null Creator | Creates a null for each Puppet Pin, chains the nulls in a hierarchy and drives the pins with expressions. | [PuppetPin_NullCreator.jsx](../../releases/latest/download/PuppetPin_NullCreator.jsx) |
 | Simple Parent | Parents all selected layers to the last layer in the selection. | [SimpleParent.jsx](../../releases/latest/download/SimpleParent.jsx) |
 | Simple Parent (Unparented Only) | Same, but skips layers that already have a parent so existing hierarchies are not broken. | [SimpleParent_Unparented.jsx](../../releases/latest/download/SimpleParent_Unparented.jsx) |
 | Sync Shy Layers | Dockable panel that synchronizes the shy status of layers from a source composition to targets, matched by name. | [SyncShyLayers.jsx](../../releases/latest/download/SyncShyLayers.jsx) |
@@ -45,7 +45,7 @@ Documentation in English and Spanish: https://zenzuke.com/scripts/
 
 | Tool | What it does | Download |
 |---|---|---|
-| 2D Parameter to Null | Creates a null for each 2D (x,y) property of selected effects and links the property to it via expression. Deprecated: After Effects now includes equivalent functionality natively. | [2DPrameterToNull.jsx](../../releases/latest/download/2DPrameterToNull.jsx) |
+| 2D Parameter to Null | Creates a null for each 2D (x,y) property of selected effects and links the property to it via expression. Deprecated: After Effects now includes equivalent functionality natively. | [2DParameterToNull.jsx](../../releases/latest/download/2DParameterToNull.jsx) |
 
 ## Versioning
 

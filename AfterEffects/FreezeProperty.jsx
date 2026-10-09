@@ -1,3 +1,4 @@
+// Freeze Property v1.1.0 | Zenzuke | https://zenzuke.com/scripts/
 (function freezeValueAutoDimension() {
     var comp = app.project.activeItem;
     if (!comp || !(comp instanceof CompItem)) {
@@ -15,41 +16,44 @@
     var processedProperties = 0;
     
     app.beginUndoGroup('Freeze Values Auto-Dimension');
+    try {
     
-    for (var i = 0; i < selectedProperties.length; i++) {
-        var prop = selectedProperties[i];
+        for (var i = 0; i < selectedProperties.length; i++) {
+            var prop = selectedProperties[i];
         
-        // Skip properties that can't have expressions without showing an alert
-        if (!prop.canSetExpression) {
-            skippedProperties++;
-            continue;
-        }
-        
-        var currentValue = prop.value;
-        var freezeExpression = "";
-        
-        // Check if the property is multi-dimensional
-        if (currentValue instanceof Array) {
-            // Multi-dimensional, round each dimension separately
-            var roundedValues = [];
-            for (var j = 0; j < currentValue.length; j++) {
-                roundedValues.push(parseFloat(currentValue[j].toFixed(2)));
+            // Skip properties that can't have expressions without showing an alert
+            if (!prop.canSetExpression) {
+                skippedProperties++;
+                continue;
             }
-            freezeExpression = "value = [" + roundedValues.join(", ") + "];";
-        } else {
-            // Single dimension, round the value
-            freezeExpression = "value = " + parseFloat(currentValue.toFixed(2)) + ";";
-        }
         
-        try {
-            prop.expression = freezeExpression;
-            processedProperties++;
-        } catch (error) {
-            skippedProperties++;
+            var currentValue = prop.value;
+            var freezeExpression = "";
+        
+            // Check if the property is multi-dimensional
+            if (currentValue instanceof Array) {
+                // Multi-dimensional, round each dimension separately
+                var roundedValues = [];
+                for (var j = 0; j < currentValue.length; j++) {
+                    roundedValues.push(parseFloat(currentValue[j].toFixed(2)));
+                }
+                freezeExpression = "value = [" + roundedValues.join(", ") + "];";
+            } else {
+                // Single dimension, round the value
+                freezeExpression = "value = " + parseFloat(currentValue.toFixed(2)) + ";";
+            }
+        
+            try {
+                prop.expression = freezeExpression;
+                processedProperties++;
+            } catch (error) {
+                skippedProperties++;
+            }
         }
-    }
     
-    app.endUndoGroup();
+    } finally {
+        app.endUndoGroup();
+    }
     
     // Show a summary instead of individual alerts
     if (processedProperties > 0) {

@@ -1,3 +1,4 @@
+// Marker Copy-Paste v1.1.0 | Zenzuke | https://zenzuke.com/scripts/
 (function(thisObj) {
     var scriptName = "Marker Copy-Paste";
     var storedMarkers = [];
@@ -130,21 +131,24 @@
             }
 
             app.beginUndoGroup("Paste Markers");
+            try {
 
-            for (var t = 0; t < targets.length; t++) {
-                var targetProp = targets[t];
-                if (shouldReplace) {
-                    while (targetProp.numKeys > 0) targetProp.removeKey(1);
+                for (var t = 0; t < targets.length; t++) {
+                    var targetProp = targets[t];
+                    if (shouldReplace) {
+                        while (targetProp.numKeys > 0) targetProp.removeKey(1);
+                    }
+
+                    for (var m = 0; m < storedMarkers.length; m++) {
+                        var mData = storedMarkers[m];
+                        var newVal = createMarkerValueFromSource(mData.value);
+                        targetProp.setValueAtTime(mData.time, newVal);
+                    }
                 }
 
-                for (var m = 0; m < storedMarkers.length; m++) {
-                    var mData = storedMarkers[m];
-                    var newVal = createMarkerValueFromSource(mData.value);
-                    targetProp.setValueAtTime(mData.time, newVal);
-                }
+            } finally {
+                app.endUndoGroup();
             }
-
-            app.endUndoGroup();
             alert("Pasted " + storedMarkers.length + " markers to " + targets.length + " target(s).");
         };
 
@@ -182,30 +186,33 @@
             }
 
             app.beginUndoGroup("Update Markers from Source");
+            try {
 
-            var totalPasted = 0;
-            for (var i = 0; i < precompLayers.length; i++) {
-                var layer = precompLayers[i];
-                var sourceComp = layer.source;
-                var sourceMarkers = sourceComp.markerProperty;
-                var targetProp = layer.property("Marker");
+                var totalPasted = 0;
+                for (var i = 0; i < precompLayers.length; i++) {
+                    var layer = precompLayers[i];
+                    var sourceComp = layer.source;
+                    var sourceMarkers = sourceComp.markerProperty;
+                    var targetProp = layer.property("Marker");
 
-                if (shouldReplace) {
-                    while (targetProp.numKeys > 0) targetProp.removeKey(1);
-                }
+                    if (shouldReplace) {
+                        while (targetProp.numKeys > 0) targetProp.removeKey(1);
+                    }
 
-                for (var m = 1; m <= sourceMarkers.numKeys; m++) {
-                    var sourceTime = sourceMarkers.keyTime(m);
-                    var sourceVal = sourceMarkers.keyValue(m);
-                    var newVal = createMarkerValueFromSource(sourceVal);
+                    for (var m = 1; m <= sourceMarkers.numKeys; m++) {
+                        var sourceTime = sourceMarkers.keyTime(m);
+                        var sourceVal = sourceMarkers.keyValue(m);
+                        var newVal = createMarkerValueFromSource(sourceVal);
                     
-                    // Align to layer startTime
-                    targetProp.setValueAtTime(sourceTime + layer.startTime, newVal);
-                    totalPasted++;
+                        // Align to layer startTime
+                        targetProp.setValueAtTime(sourceTime + layer.startTime, newVal);
+                        totalPasted++;
+                    }
                 }
-            }
 
-            app.endUndoGroup();
+            } finally {
+                app.endUndoGroup();
+            }
             alert("Updated " + totalPasted + " markers across " + precompLayers.length + " precomp(s).");
         };
 
@@ -239,8 +246,11 @@
             }
             
             app.beginUndoGroup("Rename Comp Markers");
-            var renamed = renameMarkersInProperty(activeItem.markerProperty, s, r);
-            app.endUndoGroup();
+            try {
+                var renamed = renameMarkersInProperty(activeItem.markerProperty, s, r);
+            } finally {
+                app.endUndoGroup();
+            }
             alert("Renamed " + renamed + " markers on composition.");
         };
 
@@ -258,11 +268,14 @@
             }
             
             app.beginUndoGroup("Rename Layer Markers");
-            var totalRenamed = 0;
-            for (var i = 1; i <= activeItem.numLayers; i++) {
-                totalRenamed += renameMarkersInProperty(activeItem.layer(i).property("Marker"), s, r);
+            try {
+                var totalRenamed = 0;
+                for (var i = 1; i <= activeItem.numLayers; i++) {
+                    totalRenamed += renameMarkersInProperty(activeItem.layer(i).property("Marker"), s, r);
+                }
+            } finally {
+                app.endUndoGroup();
             }
-            app.endUndoGroup();
             alert("Renamed " + totalRenamed + " markers across " + activeItem.numLayers + " layers.");
         };
 
