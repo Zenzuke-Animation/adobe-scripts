@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- After Effects: new tool **Zen Easy Rig** (v1.0), a dockable rigging panel with IK, Face and Extras tabs.
+
 ## v1.0.0 — 2026-09-23
 
 - Initial public release: 17 tools (14 After Effects + 3 Illustrator) + 1 deprecated script.
