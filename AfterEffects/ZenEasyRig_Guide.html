@@ -1,0 +1,373 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Zen Easy Rig Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a rigger's field manual. Sticky section index on the left, one reading column, amber = the controller colour used in the panel. */
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --ink: #1b2130;
+  --muted: #5b6475;
+  --line: #dde1e8;
+  --accent: #c98200;        /* amber, like the panel's Shape controllers */
+  --accent-soft: #fff3d9;
+  --code-bg: #f0f2f6;
+  --kbd-bg: #e9ecf2;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #13161d; --surface: #1b1f29; --ink: #e7eaf0; --muted: #9aa3b4; --line: #2c3240;
+    --accent: #ffb52e; --accent-soft: #2e2617; --code-bg: #20252f; --kbd-bg: #2a303c; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #13161d; --surface: #1b1f29; --ink: #e7eaf0; --muted: #9aa3b4; --line: #2c3240;
+  --accent: #ffb52e; --accent-soft: #2e2617; --code-bg: #20252f; --kbd-bg: #2a303c; color-scheme: dark;
+}
+
+/* language switch: everything exists twice, one copy is hidden */
+html:not([data-lang="es"]) .es { display: none !important; }
+html[data-lang="es"] .en { display: none !important; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.6; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 20px; padding-block: 0 64px; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; }
+@media (max-width: 860px) { .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; } nav.toc { display: none; } }
+
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+header.top .bar { max-width: 1120px; margin: 0 auto; padding: 12px 20px; display: flex; align-items: center; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 700; font-size: 18px; letter-spacing: -0.01em; color: var(--ink); text-decoration: none; }
+.brand svg { flex: none; }
+.spacer { flex: 1; }
+.lang { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--surface); }
+.lang button { font: 600 13px var(--body); border: 0; background: transparent; color: var(--muted); padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+.lang button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.lang button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 72px); align-self: start; padding-top: 40px; font-size: 14px; }
+nav.toc p { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+nav.toc a { display: block; color: var(--muted); text-decoration: none; padding: 5px 0 5px 12px; border-left: 2px solid var(--line); }
+nav.toc a:hover { color: var(--ink); border-left-color: var(--accent); }
+nav.toc a.sub { padding-left: 24px; font-size: 13px; }
+
+main { min-width: 0; padding-top: 40px; }
+.hero { padding-bottom: 28px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.hero h1 { font-family: var(--display); font-size: clamp(34px, 6vw, 54px); line-height: 1.05; letter-spacing: -0.025em; margin: 0 0 14px; text-wrap: balance; }
+.hero .lede { font-size: 19px; color: var(--muted); max-width: 62ch; margin: 0; }
+.hero .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.chip { font: 500 13px var(--body); padding: 5px 11px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); text-decoration: none; }
+.chip b { color: var(--accent); font-weight: 600; }
+
+section { padding-top: 40px; scroll-margin-top: 72px; }
+h2 { font-family: var(--display); font-size: 30px; letter-spacing: -0.02em; line-height: 1.15; margin: 0 0 6px; text-wrap: balance; }
+h2 .tab { font: 600 12px var(--body); text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); display: block; margin-bottom: 6px; }
+h3 { font-family: var(--display); font-size: 21px; letter-spacing: -0.01em; margin: 32px 0 6px; scroll-margin-top: 72px; }
+p, li { max-width: 68ch; }
+p { margin: 10px 0; }
+ul, ol { padding-left: 22px; margin: 10px 0; }
+li { margin: 5px 0; }
+a { color: var(--ink); text-decoration-color: var(--accent); text-underline-offset: 3px; }
+strong { font-weight: 600; }
+.ui { font-weight: 600; white-space: nowrap; }
+.ui::before { content: ""; display: inline-block; width: 7px; height: 7px; border: 1.5px solid var(--accent); border-radius: 2px; margin-right: 6px; vertical-align: 1px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--code-bg); padding: 1px 6px; border-radius: 4px; }
+pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font: 14px/1.55 var(--mono); margin: 12px 0; }
+pre code { background: none; padding: 0; font-size: inherit; }
+pre .c { color: var(--muted); }
+kbd { font: 500 13px var(--mono); background: var(--kbd-bg); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; }
+
+.steps { list-style: none; padding: 0; counter-reset: s; display: grid; gap: 10px; }
+.steps li { counter-increment: s; position: relative; padding-left: 40px; max-width: 64ch; }
+.steps li::before { content: counter(s); position: absolute; left: 0; top: 1px; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font: 700 13px/26px var(--body); text-align: center; }
+
+.table-wrap { overflow-x: auto; margin: 12px 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 15px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; background: var(--code-bg); }
+tr:last-child td { border-bottom: 0; }
+td:first-child { white-space: nowrap; font-weight: 600; }
+
+.note { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 12px 16px; margin: 14px 0; max-width: 68ch; }
+.note.tip { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: var(--accent-soft); }
+.note p { margin: 4px 0; }
+.note .label { font: 600 12px var(--body); text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); }
+
+.modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 14px 0; }
+.mode { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; min-width: 0; }
+.mode h4 { margin: 0 0 4px; font-family: var(--display); font-size: 17px; }
+.mode p { margin: 0; font-size: 15px; color: var(--muted); }
+
+footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<header class="top">
+  <div class="bar">
+    <a class="brand" href="#top">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="5" y="5" width="16" height="16" fill="none" stroke="var(--accent)" stroke-width="2.2"/><path d="M13 0v26M0 13h26" stroke="var(--accent)" stroke-width="2.2"/></svg>
+      Zen Easy Rig
+    </a>
+    <span class="spacer"></span>
+    <div class="lang" role="group" aria-label="Language / Idioma">
+      <button type="button" id="btn-en" aria-pressed="true">English</button>
+      <button type="button" id="btn-es" aria-pressed="false">Español</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap" id="top">
+  <nav class="toc" aria-label="Contents">
+    <p><span class="en">Contents</span><span class="es">Índice</span></p>
+    <a href="#install"><span class="en">Install</span><span class="es">Instalación</span></a>
+    <a href="#ik">IK</a>
+    <a class="sub" href="#ik-settings"><span class="en">IK controls</span><span class="es">Controles del IK</span></a>
+    <a class="sub" href="#parenting"><span class="en">Parenting</span><span class="es">Emparentado</span></a>
+    <a href="#face"><span class="en">Face</span><span class="es">Cara</span></a>
+    <a class="sub" href="#face-parts"><span class="en">Face parts</span><span class="es">Partes de la cara</span></a>
+    <a class="sub" href="#eyes"><span class="en">Eye generator</span><span class="es">Generador de ojos</span></a>
+    <a class="sub" href="#simple-eyes"><span class="en">Simple eyes</span><span class="es">Ojos simples</span></a>
+    <a href="#extras">Extras</a>
+    <a class="sub" href="#morph">Morph</a>
+    <a href="#expressions"><span class="en">Editing expressions</span><span class="es">Editar expresiones</span></a>
+    <a href="#trouble"><span class="en">Troubleshooting</span><span class="es">Problemas</span></a>
+  </nav>
+
+  <main>
+    <div class="hero">
+      <h1><span class="en">Rig characters in a few clicks, and still understand every expression.</span><span class="es">Riggea personajes en pocos clics, y entiende cada expresión.</span></h1>
+      <p class="lede en">Zen Easy Rig is a dockable After Effects panel with three tabs: IK for limbs, Face for heads and eyes, and Extras for handy little rigs. Everything it builds is a short, commented expression you can open and change by hand.</p>
+      <p class="lede es">Zen Easy Rig es un panel acoplable de After Effects con tres pestañas: IK para extremidades, Cara para cabezas y ojos, y Extras para pequeños rigs útiles. Todo lo que crea es una expresión corta y comentada que puedes abrir y cambiar a mano.</p>
+      <div class="chips">
+        <a class="chip" href="#ik"><b>IK</b> · <span class="en">layers, pins, paths</span><span class="es">capas, pines, trazados</span></a>
+        <a class="chip" href="#face"><b><span class="en">Face</span><span class="es">Cara</span></b> · <span class="en">look, squash, flip, eyes</span><span class="es">mirada, squash, flip, ojos</span></a>
+        <a class="chip" href="#extras"><b>Extras</b> · <span class="en">delay, fan, morph</span><span class="es">retardo, abanico, morph</span></a>
+      </div>
+    </div>
+
+    <!-- ============ INSTALL ============ -->
+    <section id="install">
+      <h2><span class="en">Install</span><span class="es">Instalación</span></h2>
+      <ol class="steps">
+        <li class="en">Copy <code>ZenEasyRig.jsx</code> into <code>C:\Program Files\Adobe\Adobe After Effects 2026\Support Files\Scripts\ScriptUI Panels\</code></li>
+        <li class="es">Copia <code>ZenEasyRig.jsx</code> en <code>C:\Program Files\Adobe\Adobe After Effects 2026\Support Files\Scripts\ScriptUI Panels\</code></li>
+        <li class="en">Restart After Effects and open <span class="ui">Window › ZenEasyRig.jsx</span>. Dock it next to your Timeline.</li>
+        <li class="es">Reinicia After Effects y abre <span class="ui">Ventana › ZenEasyRig.jsx</span>. Acóplalo junto a la Línea de tiempo.</li>
+        <li class="en">At the top, pick the <span class="ui">Controller</span> type the tools will create.</li>
+        <li class="es">Arriba, elige el tipo de <span class="ui">Controller</span> que crearán las herramientas.</li>
+      </ol>
+      <div class="table-wrap"><table>
+        <thead><tr><th><span class="en">Controller</span><span class="es">Controlador</span></th><th><span class="en">What you get</span><span class="es">Qué obtienes</span></th></tr></thead>
+        <tbody>
+          <tr><td>Null</td><td><span class="en">A plain null layer. Nulls stay at 100% scale so anything parented to them keeps a clean scale (the Look null is the one exception, at 50%).</span><span class="es">Una capa null normal. Los nulls se quedan al 100% de escala para que lo que cuelgue de ellos mantenga una escala limpia (el null de Look es la excepción, al 50%).</span></td></tr>
+          <tr><td>Shape (guide)</td><td><span class="en">An amber square with a crosshair, with Guide Layer on so it never renders. The crosshair shows you when it's rotated.</span><span class="es">Un cuadrado ámbar con cruz, con Capa guía activada para que nunca se renderice. La cruz te deja ver cuándo está rotado.</span></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ============ IK ============ -->
+    <section id="ik">
+      <h2><span class="tab"><span class="en">IK tab</span><span class="es">Pestaña IK</span></span><span class="en">Two-bone IK, on anything</span><span class="es">IK de dos huesos, sobre cualquier cosa</span></h2>
+      <p class="en">Select what you want to rig, set the options, click <span class="ui">Create IK</span>. The panel creates the controller at the end of the chain for you.</p>
+      <p class="es">Selecciona lo que quieres riggear, ajusta las opciones y pulsa <span class="ui">Create IK</span>. El panel crea el controlador en el extremo de la cadena.</p>
+      <div class="modes">
+        <div class="mode"><h4><span class="en">3 layers</span><span class="es">3 capas</span></h4><p class="en">Upper, lower, end (arm, forearm, hand). Any layer type, shape layers included. They get parented in a chain if they aren't already.</p><p class="es">Superior, inferior y final (brazo, antebrazo, mano). Cualquier tipo de capa, incluidas capas de forma. Se emparentan en cadena si no lo están.</p></div>
+        <div class="mode"><h4><span class="en">3 points</span><span class="es">3 puntos</span></h4><p class="en">Any 2D point properties: puppet pins, effect points (gradients…), shape group positions, layer positions. Root, middle, end.</p><p class="es">Cualquier propiedad de punto 2D: pines de marioneta, puntos de efectos (degradados…), posiciones de grupos de forma, posiciones de capa. Raíz, medio, final.</p></div>
+        <div class="mode"><h4><span class="en">1 path</span><span class="es">1 trazado</span></h4><p class="en">A shape path or mask with 3 or more points, straight or curved. First point stays, last point follows, the middle point bends.</p><p class="es">Un trazado de forma o máscara con 3 o más puntos, recto o curvo. El primero se queda, el último sigue al control, el del medio se dobla.</p></div>
+      </div>
+      <div class="note tip"><p class="label"><span class="en">Before you click</span><span class="es">Antes de pulsar</span></p>
+        <p class="en">For layers, put each <strong>anchor point on its joint</strong>: shoulder, elbow, wrist. For puppet pins, Pin 1 is the root and the highest pin number is the end (the panel sorts them for you).</p>
+        <p class="es">En capas, pon cada <strong>punto de anclaje en su articulación</strong>: hombro, codo, muñeca. En pines de marioneta, el Pin 1 es la raíz y el número más alto es el final (el panel los ordena por ti).</p>
+      </div>
+
+      <h3 id="ik-settings"><span class="en">Controls on the IK controller</span><span class="es">Controles en el controlador del IK</span></h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th><span class="en">Control</span><span class="es">Control</span></th><th><span class="en">What it does</span><span class="es">Qué hace</span></th></tr></thead>
+        <tbody>
+          <tr><td>IK / FK</td><td><span class="en">100 = IK follows the controller. 0 = FK: the bones use their own Rotation keyframes. In between blends. (Optional, tick <span class="ui">IK / FK slider</span>.)</span><span class="es">100 = el IK sigue al controlador. 0 = FK: los huesos usan sus propios keyframes de Rotación. Los valores intermedios mezclan. (Opcional, marca <span class="ui">IK / FK slider</span>.)</span></td></tr>
+          <tr><td>Soft IK</td><td><span class="en">% of the chain that eases into full reach, so the arm never "pops" straight. 5–10 is smooth, 0 is classic IK. If your rest pose is almost straight, the panel lowers it just enough that nothing moves when the IK is created.</span><span class="es">% de la cadena que se suaviza al llegar a su máximo, para que el brazo no "salte" al estirarse. 5–10 es suave, 0 es el IK clásico. Si tu pose inicial está casi recta, el panel lo baja lo justo para que nada se mueva al crear el IK.</span></td></tr>
+          <tr><td>Flip Bend</td><td><span class="en">Bends the elbow the other way. It's preset to match your current pose.</span><span class="es">Dobla el codo hacia el otro lado. Viene ajustado según tu pose actual.</span></td></tr>
+          <tr><td>Stretch</td><td><span class="en">The bones grow to reach the controller when it's out of reach. (Optional.)</span><span class="es">Los huesos se alargan para alcanzar el controlador cuando está fuera de alcance. (Opcional.)</span></td></tr>
+          <tr><td>End Follows Ctrl</td><td><span class="en">0–100. How much the end layer (the hand) takes the controller's rotation. Layer IK only.</span><span class="es">0–100. Cuánto toma la capa final (la mano) la rotación del controlador. Solo IK de capas.</span></td></tr>
+          <tr><td>Curve %</td><td><span class="en">Path IK only. Scales every curve handle at once: 100 = as drawn, 0 = straight segments, 200 = double curve.</span><span class="es">Solo IK de trazado. Escala todas las asas de curva a la vez: 100 = como lo dibujaste, 0 = segmentos rectos, 200 = el doble de curva.</span></td></tr>
+        </tbody>
+      </table></div>
+      <p class="en">To animate in FK, set <span class="ui">IK / FK</span> to 0 and keyframe the bones' Rotation as usual. For path IK, the path's own keyframes are the FK pose.</p>
+      <p class="es">Para animar en FK, pon <span class="ui">IK / FK</span> a 0 y anima la Rotación de los huesos como siempre. En el IK de trazado, los keyframes del propio trazado son la pose FK.</p>
+
+      <h3 id="parenting"><span class="en">Parenting buttons</span><span class="es">Botones de emparentado</span></h3>
+      <p class="en">Select the children first and the parent <strong>last</strong>.</p>
+      <p class="es">Selecciona primero los hijos y el padre <strong>al final</strong>.</p>
+      <ul>
+        <li class="en"><span class="ui">Simple Parent</span> parents every selected layer to the last one.</li>
+        <li class="es"><span class="ui">Simple Parent</span> emparenta todas las capas seleccionadas a la última.</li>
+        <li class="en"><span class="ui">Simple Parent (unparented only)</span> does the same, but layers that already have a parent keep it.</li>
+        <li class="es"><span class="ui">Simple Parent (unparented only)</span> hace lo mismo, pero las capas que ya tienen padre lo conservan.</li>
+      </ul>
+    </section>
+
+    <!-- ============ FACE ============ -->
+    <section id="face">
+      <h2><span class="tab"><span class="en">Face tab</span><span class="es">Pestaña Cara</span></span><span class="en">A face that looks around</span><span class="es">Una cara que mira a su alrededor</span></h2>
+      <p class="en">The face rig works on separate layers <em>and</em> on groups inside one big shape layer. One control, <strong>CTRL Look</strong>, says where the face is looking; every part reacts to how far it has moved from the centre.</p>
+      <p class="es">El rig de cara funciona con capas separadas <em>y</em> con grupos dentro de una sola capa de forma. Un control, <strong>CTRL Look</strong>, dice hacia dónde mira la cara; cada parte reacciona según cuánto se ha movido desde el centro.</p>
+      <ol class="steps">
+        <li class="en">Select your base head shape and click <span class="ui">Create Head + Look controls</span>. <strong>CTRL Head</strong> appears on that layer's anchor point and the layer is parented to it. If the head had a parent (a body), CTRL Head takes it over.</li>
+        <li class="es">Selecciona la forma base de la cabeza y pulsa <span class="ui">Create Head + Look controls</span>. <strong>CTRL Head</strong> aparece en el punto de anclaje de esa capa y la capa queda emparentada a él. Si la cabeza tenía padre (un cuerpo), CTRL Head lo hereda.</li>
+        <li class="en">Select face parts (layers, or groups in the timeline), tick what each should do, click <span class="ui">Apply</span>.</li>
+        <li class="es">Selecciona partes de la cara (capas, o grupos en la línea de tiempo), marca lo que debe hacer cada una y pulsa <span class="ui">Apply</span>.</li>
+        <li class="en">Move <strong>CTRL Look</strong> to animate the look. Rotate or move <strong>CTRL Head</strong> to move the whole head.</li>
+        <li class="es">Mueve <strong>CTRL Look</strong> para animar la mirada. Rota o mueve <strong>CTRL Head</strong> para mover toda la cabeza.</li>
+      </ol>
+
+      <h3 id="face-parts"><span class="en">Face part options</span><span class="es">Opciones de las partes</span></h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th><span class="en">Option</span><span class="es">Opción</span></th><th><span class="en">What it does</span><span class="es">Qué hace</span></th><th><span class="en">Typical use</span><span class="es">Uso típico</span></th></tr></thead>
+        <tbody>
+          <tr><td>Move · depth</td><td><span class="en">Follows the look by this amount. 1 = moves fully, 0.5 = half, negative = moves the opposite way. Use the slider or type any number.</span><span class="es">Sigue la mirada en esta cantidad. 1 = se mueve del todo, 0.5 = la mitad, negativo = se mueve al revés. Usa el deslizador o escribe cualquier número.</span></td><td><span class="en">Eyes 0.8, mouth 0.7, ponytail −0.4</span><span class="es">Ojos 0.8, boca 0.7, coleta −0.4</span></td></tr>
+          <tr><td>Separate up / down</td><td><span class="en">Depth above becomes left/right, this box is up/down.</span><span class="es">La profundidad de arriba pasa a ser izquierda/derecha y esta casilla arriba/abajo.</span></td><td><span class="en">Ears that slide sideways but barely up</span><span class="es">Orejas que se deslizan a los lados pero apenas hacia arriba</span></td></tr>
+          <tr><td>Squash H · V</td><td><span class="en">Shrinks the part as the look moves. <strong>Both ways</strong> ticked = shrinks whichever way you look; unticked = shrinks one way, grows the other.</span><span class="es">Encoge la parte cuando la mirada se mueve. <strong>Both ways</strong> marcado = encoge mires hacia donde mires; sin marcar = encoge hacia un lado y crece hacia el otro.</span></td><td><span class="en">Glasses H 0.2 both ways</span><span class="es">Gafas H 0.2 en ambos sentidos</span></td></tr>
+          <tr><td>Rotate X · Y</td><td><span class="en">Degrees per pixel the look moves sideways (X) and up/down (Y).</span><span class="es">Grados por cada píxel que la mirada se mueve de lado (X) y arriba/abajo (Y).</span></td><td><span class="en">Eyebrows, nose tip</span><span class="es">Cejas, punta de la nariz</span></td></tr>
+          <tr><td>Flip when look</td><td><span class="en">Mirrors the part while the look is past a value. X mirrors left/right, Y flips upside down. <code>X &lt; 0</code> flips at the centre line.</span><span class="es">Refleja la parte mientras la mirada pasa de un valor. X refleja izquierda/derecha, Y la pone boca abajo. <code>X &lt; 0</code> la voltea en la línea central.</span></td><td><span class="en">Nose, side hair</span><span class="es">Nariz, pelo lateral</span></td></tr>
+          <tr><td>Show when look</td><td><span class="en">The part is only visible while the look is past a value.</span><span class="es">La parte solo es visible mientras la mirada pasa de un valor.</span></td><td><span class="en">An ear that appears on one side</span><span class="es">Una oreja que aparece en un lado</span></td></tr>
+        </tbody>
+      </table></div>
+      <ul>
+        <li class="en"><span class="ui">Get from selected</span> reads a part's current settings back into the panel. Tweak, then <span class="ui">Apply</span> again.</li>
+        <li class="es"><span class="ui">Get from selected</span> lee los ajustes actuales de una parte y los pone en el panel. Ajusta y vuelve a pulsar <span class="ui">Apply</span>.</li>
+        <li class="en"><span class="ui">Apply</span> mirrors the checkboxes: anything unticked is removed from the part. Other expressions (IK, Delay, your own) are never touched.</li>
+        <li class="es"><span class="ui">Apply</span> refleja las casillas: lo que esté desmarcado se quita de la parte. Las demás expresiones (IK, Delay, las tuyas) no se tocan nunca.</li>
+        <li class="en"><span class="ui">Front / Back pair</span>: select the front part, then the back part. They swap visibility at the Show-when value, for example a hair lock that passes in front of or behind the head.</li>
+        <li class="es"><span class="ui">Front / Back pair</span>: selecciona la parte delantera y luego la trasera. Se intercambian la visibilidad en el valor de "Show when", por ejemplo un mechón que pasa por delante o por detrás de la cabeza.</li>
+      </ul>
+
+      <h3 id="eyes"><span class="en">Eye generator</span><span class="es">Generador de ojos</span></h3>
+      <p class="en">Builds flexible eyes from one simple <strong>Base</strong> line (corner to corner): the eye white, the lid line, a pupil cut to the eye shape, and lashes that ride the lid. Reshape or keyframe the Base path and everything follows.</p>
+      <p class="es">Crea ojos flexibles a partir de una línea <strong>Base</strong> (de esquina a esquina): el blanco del ojo, la línea del párpado, una pupila recortada con la forma del ojo y pestañas que siguen el párpado. Cambia o anima el trazado Base y todo le sigue.</p>
+      <ul>
+        <li class="en"><strong>From scratch:</strong> set Width, Gap and Lashes, tick <span class="ui">Both eyes</span>, click <span class="ui">Create Eyes</span>. Tick <span class="ui">Add into the selected shape layer</span> to put them inside your face layer.</li>
+        <li class="es"><strong>Desde cero:</strong> ajusta Width, Gap y Lashes, marca <span class="ui">Both eyes</span> y pulsa <span class="ui">Create Eyes</span>. Marca <span class="ui">Add into the selected shape layer</span> para meterlos dentro de tu capa de cara.</li>
+        <li class="en"><strong>From your own lines:</strong> draw one line per eye (2 or more points), select the paths and click <span class="ui">Create Eyes</span>. Each line becomes that eye's Base. If <span class="ui">Both eyes</span> is ticked and only one line is selected, the panel asks first.</li>
+        <li class="es"><strong>Desde tus propias líneas:</strong> dibuja una línea por ojo (2 o más puntos), selecciona los trazados y pulsa <span class="ui">Create Eyes</span>. Cada línea se convierte en la Base de ese ojo. Si <span class="ui">Both eyes</span> está marcado y solo hay una línea, el panel te pregunta antes.</li>
+        <li class="en">Lashes are straight bezier paths with handles, ready to bend. 0 lashes = no lid line either.</li>
+        <li class="es">Las pestañas son trazados bezier rectos con asas, listos para curvar. 0 pestañas = tampoco hay línea de párpado.</li>
+      </ul>
+
+      <h3 id="simple-eyes"><span class="en">Simple eyes</span><span class="es">Ojos simples</span></h3>
+      <p class="en">For pill-shaped cartoon eyes. Select your drawn eyes and click <span class="ui">Make Simple Eyes</span>: each becomes a rounded rectangle with the same size, place and colour that can blink. Your drawing is switched off, not deleted.</p>
+      <p class="es">Para ojos de dibujo con forma de píldora. Selecciona los ojos dibujados y pulsa <span class="ui">Make Simple Eyes</span>: cada uno se convierte en un rectángulo redondeado del mismo tamaño, lugar y color que puede parpadear. Tu dibujo se desactiva, no se borra.</p>
+      <ul>
+        <li class="en">One shape layer with exactly two groups = two eyes. Several layers = one eye per layer; inside each, the biggest group is the eye and the next one its pupil.</li>
+        <li class="es">Una capa de forma con exactamente dos grupos = dos ojos. Varias capas = un ojo por capa; dentro de cada una, el grupo más grande es el ojo y el siguiente su pupila.</li>
+        <li class="en">Tick <span class="ui">With pupil</span> to add a pupil (it takes your drawn pupil's colour and size if there is one). <code>closeTo = 0.5</code> in the expression sets where the eye closes: 0 top, 1 bottom.</li>
+        <li class="es">Marca <span class="ui">With pupil</span> para añadir pupila (toma el color y tamaño de tu pupila dibujada si existe). <code>closeTo = 0.5</code> en la expresión indica dónde se cierra el ojo: 0 arriba, 1 abajo.</li>
+      </ul>
+
+      <h3><span class="en">Eye controls</span><span class="es">Controles de los ojos</span></h3>
+      <p class="en">They go on <strong>CTRL Look</strong> if it exists, otherwise on a new <strong>CTRL Eyes</strong>.</p>
+      <p class="es">Se colocan en <strong>CTRL Look</strong> si existe; si no, en un nuevo <strong>CTRL Eyes</strong>.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th><span class="en">Control</span><span class="es">Control</span></th><th><span class="en">What it does</span><span class="es">Qué hace</span></th></tr></thead>
+        <tbody>
+          <tr><td>Eye Opening</td><td><span class="en">Full eye height in pixels (generated eyes).</span><span class="es">Altura total del ojo en píxeles (ojos generados).</span></td></tr>
+          <tr><td>Top Lid · Bottom Lid</td><td><span class="en">100 = open, 0 = closed. Animate both to 0 for a blink.</span><span class="es">100 = abierto, 0 = cerrado. Anima ambos a 0 para un parpadeo.</span></td></tr>
+          <tr><td>Eye Open</td><td><span class="en">Simple eyes: 100 = open, 0 = a thin line.</span><span class="es">Ojos simples: 100 = abierto, 0 = una línea fina.</span></td></tr>
+          <tr><td>Roundness</td><td><span class="en">How round the eye white is.</span><span class="es">Lo redondo que es el blanco del ojo.</span></td></tr>
+          <tr><td>Pupils</td><td><span class="en">Moves both pupils by hand.</span><span class="es">Mueve las dos pupilas a mano.</span></td></tr>
+          <tr><td>Pupil Size</td><td><span class="en">Pupil diameter in pixels.</span><span class="es">Diámetro de la pupila en píxeles.</span></td></tr>
+          <tr><td>Pupil Follow</td><td><span class="en">How far pupils slide when CTRL Look moves. 0.4 = move Look 50 px, pupils move 20 px.</span><span class="es">Cuánto se deslizan las pupilas al mover CTRL Look. 0.4 = mueves Look 50 px, las pupilas se mueven 20 px.</span></td></tr>
+          <tr><td>Convergence</td><td><span class="en">Positive = pupils closer (cross-eyed), negative = further apart.</span><span class="es">Positivo = pupilas más juntas (bizco), negativo = más separadas.</span></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ============ EXTRAS ============ -->
+    <section id="extras">
+      <h2><span class="tab"><span class="en">Extras tab</span><span class="es">Pestaña Extras</span></span><span class="en">Small rigs you'll use every day</span><span class="es">Pequeños rigs para el día a día</span></h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th><span class="en">Tool</span><span class="es">Herramienta</span></th><th><span class="en">How to use it</span><span class="es">Cómo usarla</span></th></tr></thead>
+        <tbody>
+          <tr><td>Delay</td><td><span class="en">Select layers, set Frames, click. Each layer follows its parent that many frames late: free overlap for tails, antennas, hair.</span><span class="es">Selecciona capas, ajusta Frames y pulsa. Cada capa sigue a su padre con ese número de fotogramas de retraso: overlap gratis para colas, antenas, pelo.</span></td></tr>
+          <tr><td>Ignore parent rotation</td><td><span class="en">The layer still moves with its parent but keeps its own angle. You can still keyframe its rotation.</span><span class="es">La capa sigue moviéndose con su padre pero mantiene su propio ángulo. Puedes seguir animando su rotación.</span></td></tr>
+          <tr><td>Copy / paste controls</td><td><span class="en">Select one or more layers with expression controls (or just some of their controls) and click <span class="ui">Copy controls</span>. Select another layer and click <span class="ui">Paste + link</span>: the same controls appear there with their values and keyframes, and the old ones are linked to them, so everything that used the old controls is now driven from the new layer. Works across comps. Dropdown menus aren't copied.</span><span class="es">Selecciona una o varias capas con controles de expresión (o solo algunos de sus controles) y pulsa <span class="ui">Copy controls</span>. Selecciona otra capa y pulsa <span class="ui">Paste + link</span>: los mismos controles aparecen allí con sus valores y keyframes, y los antiguos quedan enlazados a ellos, así que todo lo que usaba los controles antiguos ahora se maneja desde la capa nueva. Funciona entre composiciones. Los menús desplegables no se copian.</span></td></tr>
+          <tr><td>Fan rig</td><td><span class="en">Select layers (or groups in one shape layer) in order. <strong>Fan</strong> spreads them apart, <strong>Rotate</strong> turns them all. Spread from the centre or from the first. Groups get the controls on their own layer.</span><span class="es">Selecciona capas (o grupos de una capa de forma) en orden. <strong>Fan</strong> los abre en abanico, <strong>Rotate</strong> los gira todos. Se abre desde el centro o desde el primero. Los grupos reciben los controles en su propia capa.</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="morph">Morph</h3>
+      <div class="modes">
+        <div class="mode"><h4><span class="en">Morph (poses)</span><span class="es">Morph (poses)</span></h4><p class="en">Select a property with one keyframe per pose (a mouth path). The slider picks the pose: 0 = first keyframe, 1 = second… Values in between blend.</p><p class="es">Selecciona una propiedad con un keyframe por pose (un trazado de boca). El deslizador elige la pose: 0 = primer keyframe, 1 = segundo… Los valores intermedios mezclan.</p></div>
+        <div class="mode"><h4><span class="en">Morph (Time based)</span><span class="es">Morph (por tiempo)</span></h4><p class="en">Select keyframed properties on any number of layers. One slider plays them all in sync: 0 = first keyframe, 100 = last.</p><p class="es">Selecciona propiedades animadas en cualquier número de capas. Un deslizador las reproduce sincronizadas: 0 = primer keyframe, 100 = último.</p></div>
+        <div class="mode"><h4>Remove Morph</h4><p class="en">Takes the morph off so you can fix the keyframes, then create it again. Unused sliders are deleted.</p><p class="es">Quita el morph para que puedas corregir los keyframes y volver a crearlo. Los deslizadores sin uso se borran.</p></div>
+      </div>
+      <p class="en">Face parts get their morph slider on <strong>CTRL Look</strong>; other layers on themselves (poses) or on a new <strong>CTRL Morph</strong> (time based).</p>
+      <p class="es">Las partes de la cara reciben su deslizador de morph en <strong>CTRL Look</strong>; las demás capas en sí mismas (poses) o en un nuevo <strong>CTRL Morph</strong> (por tiempo).</p>
+    </section>
+
+    <!-- ============ EXPRESSIONS ============ -->
+    <section id="expressions">
+      <h2><span class="en">Editing the expressions</span><span class="es">Editar las expresiones</span></h2>
+      <p class="en">Every expression starts with a <code>// Zen Easy Rig</code> comment, names its controller on the first lines, and keeps its numbers in plain variables. Press <kbd>E</kbd> <kbd>E</kbd> on a layer to see them. A face move looks like this:</p>
+      <p class="es">Cada expresión empieza con un comentario <code>// Zen Easy Rig</code>, nombra su controlador en las primeras líneas y guarda sus números en variables simples. Pulsa <kbd>E</kbd> <kbd>E</kbd> sobre una capa para verlas. Un movimiento de cara se ve así:</p>
+<pre><code><span class="c">// Zen Easy Rig - face move</span>
+look = thisComp.layer("CTRL Look").transform.position;   <span class="c">// Look offset</span>
+depth = 0.8;   <span class="c">// 1 = moves with the look, 0 = stays, negative = behind the head</span>
+value + look * depth;</code></pre>
+      <ul>
+        <li class="en">Change a number (<code>depth = 0.8;</code>) to tune it without the panel.</li>
+        <li class="es">Cambia un número (<code>depth = 0.8;</code>) para ajustarlo sin el panel.</li>
+        <li class="en">Renamed a controller? Update the name in quotes on the first lines.</li>
+        <li class="es">¿Renombraste un controlador? Actualiza el nombre entre comillas de las primeras líneas.</li>
+        <li class="en"><code>value</code> is the property's own value or keyframes, so you can always animate on top.</li>
+        <li class="es"><code>value</code> es el valor o los keyframes de la propiedad, así que siempre puedes animar encima.</li>
+      </ul>
+    </section>
+
+    <!-- ============ TROUBLESHOOTING ============ -->
+    <section id="trouble">
+      <h2><span class="en">Troubleshooting</span><span class="es">Problemas comunes</span></h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th><span class="en">You see</span><span class="es">Ves</span></th><th><span class="en">Fix</span><span class="es">Solución</span></th></tr></thead>
+        <tbody>
+          <tr><td><span class="en">Expression error after renaming</span><span class="es">Error de expresión tras renombrar</span></td><td><span class="en">The expression looks layers up by name. Rename it back, or edit the name in the expression's first lines.</span><span class="es">La expresión busca las capas por su nombre. Devuélvele el nombre o edítalo en las primeras líneas de la expresión.</span></td></tr>
+          <tr><td><span class="en">The arm spins or bends the wrong way</span><span class="es">El brazo gira o se dobla al revés</span></td><td><span class="en">Check the anchor points sit on the joints, then toggle <span class="ui">Flip Bend</span>.</span><span class="es">Comprueba que los puntos de anclaje están en las articulaciones y cambia <span class="ui">Flip Bend</span>.</span></td></tr>
+          <tr><td><span class="en">The chain moved when the IK was created</span><span class="es">La cadena se movió al crear el IK</span></td><td><span class="en">Soft IK on an almost straight pose. The panel lowers it automatically; set Soft IK to 0 for an exact match.</span><span class="es">Soft IK sobre una pose casi recta. El panel lo baja solo; pon Soft IK a 0 para que encaje exacto.</span></td></tr>
+          <tr><td><span class="en">IK on 3D layers</span><span class="es">IK en capas 3D</span></td><td><span class="en">The IK is 2D only.</span><span class="es">El IK es solo 2D.</span></td></tr>
+          <tr><td><span class="en">Offset on paths inside groups</span><span class="es">Desfase en trazados dentro de grupos</span></td><td><span class="en">Groups that are rotated or scaled around a path aren't accounted for. Moved groups are fine.</span><span class="es">No se tienen en cuenta los grupos rotados o escalados alrededor del trazado. Los grupos solo desplazados funcionan bien.</span></td></tr>
+          <tr><td><span class="en">I want a different slider range</span><span class="es">Quiero otro rango en un deslizador</span></td><td><span class="en">Scripts can't set it. Right-click the slider value › Edit Value.</span><span class="es">Los scripts no pueden cambiarlo. Clic derecho en el valor del deslizador › Editar valor.</span></td></tr>
+          <tr><td><span class="en">Everything got slow</span><span class="es">Todo va lento</span></td><td><span class="en">Expression-heavy comps recalculate every frame. Close viewers you aren't using and purge the cache (Edit › Purge › All Memory &amp; Disk Cache).</span><span class="es">Las composiciones con muchas expresiones recalculan cada fotograma. Cierra los visores que no uses y purga la caché (Edición › Purgar › Toda la memoria y caché de disco).</span></td></tr>
+        </tbody>
+      </table></div>
+      <footer>
+        <p class="en">Zen Easy Rig · After Effects 2026 · every tool is undoable in one step (<kbd>Ctrl</kbd> <kbd>Z</kbd>).</p>
+        <p class="es">Zen Easy Rig · After Effects 2026 · cada herramienta se deshace en un solo paso (<kbd>Ctrl</kbd> <kbd>Z</kbd>).</p>
+      </footer>
+    </section>
+  </main>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement, en = document.getElementById("btn-en"), es = document.getElementById("btn-es");
+  function set(lang) {
+    root.setAttribute("data-lang", lang);
+    root.setAttribute("lang", lang);
+    en.setAttribute("aria-pressed", lang === "en" ? "true" : "false");
+    es.setAttribute("aria-pressed", lang === "es" ? "true" : "false");
+    try { localStorage.setItem("zer-lang", lang); } catch (e) {}
+  }
+  var start = "en";
+  try { start = localStorage.getItem("zer-lang") || ""; } catch (e) {}
+  if (!start) start = (location.hash === "#es" || (navigator.language || "").toLowerCase().indexOf("es") === 0) ? "es" : "en";
+  if (location.hash === "#es") start = "es";
+  if (location.hash === "#en") start = "en";
+  set(start);
+  en.addEventListener("click", function () { set("en"); });
+  es.addEventListener("click", function () { set("es"); });
+})();
+</script>
+
+</body></html>

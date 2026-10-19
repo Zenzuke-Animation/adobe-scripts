@@ -32,7 +32,9 @@ Documentation in English and Spanish: https://zenzuke.com/scripts/
 | Simple Parent (Unparented Only) | Same, but skips layers that already have a parent so existing hierarchies are not broken. | [SimpleParent_Unparented.jsx](../../releases/latest/download/SimpleParent_Unparented.jsx) |
 | Sync Shy Layers | Dockable panel that synchronizes the shy status of layers from a source composition to targets, matched by name. | [SyncShyLayers.jsx](../../releases/latest/download/SyncShyLayers.jsx) |
 | Trim To Keys | Trims selected layers so their duration runs from their first to their last keyframe. | [TrimToKeys.jsx](../../releases/latest/download/TrimToKeys.jsx) |
-| Zen Easy Rig | Dockable rigging panel: two-bone IK on layers, points or paths; Head/Look face rig with an eye generator; Delay, Fan, Morph and Copy / paste controls. Every expression is short and commented. | [ZenEasyRig.jsx](../../releases/latest/download/ZenEasyRig.jsx) |
+| Zen Easy Rig | Dockable rigging panel: two-bone IK on layers, points or paths; Head/Look face rig with an eye generator; Delay, Fan, Morph and Copy / paste controls. Every expression is short and commented. | [ZenEasyRig.jsx](../../releases/latest/download/ZenEasyRig.jsx) · [Guide (EN/ES)](AfterEffects/ZenEasyRig_Guide.html) |
+
+Zen Easy Rig comes with a full guide in English and Spanish: download [`AfterEffects/ZenEasyRig_Guide.html`](AfterEffects/ZenEasyRig_Guide.html) and open it in your browser.
 
 ### Illustrator
 
