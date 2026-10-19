@@ -34,6 +34,8 @@ Documentation in English and Spanish: https://zenzuke.com/scripts/
 | Trim To Keys | Trims selected layers so their duration runs from their first to their last keyframe. | [TrimToKeys.jsx](../../releases/latest/download/TrimToKeys.jsx) |
 | Zen Easy Rig | Dockable rigging panel: two-bone IK on layers, points or paths; Head/Look face rig with an eye generator; Delay, Fan, Morph and Copy / paste controls. Every expression is short and commented. | [ZenEasyRig.jsx](../../releases/latest/download/ZenEasyRig.jsx) · [Guide (EN/ES)](AfterEffects/ZenEasyRig_Guide.html) |
 
+Zen Easy Rig comes with a full guide in English and Spanish: download [`AfterEffects/ZenEasyRig_Guide.html`](AfterEffects/ZenEasyRig_Guide.html) and open it in your browser.
+
 ### Illustrator
 
 | Tool | What it does | Download |
@@ -47,8 +49,6 @@ Documentation in English and Spanish: https://zenzuke.com/scripts/
 | Tool | What it does | Download |
 |---|---|---|
 | 2D Parameter to Null | Creates a null for each 2D (x,y) property of selected effects and links the property to it via expression. Deprecated: After Effects now includes equivalent functionality natively. | [2DPrameterToNull.jsx](../../releases/latest/download/2DPrameterToNull.jsx) |
-
-Zen Easy Rig comes with a full guide in English and Spanish: download [`AfterEffects/ZenEasyRig_Guide.html`](AfterEffects/ZenEasyRig_Guide.html) and open it in your browser.
 
 ## Versioning
 
