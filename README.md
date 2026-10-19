@@ -8,7 +8,7 @@ Documentation in English and Spanish: https://zenzuke.com/scripts/
 
 1. Download a script from the tables below (or from the [Releases](../../releases) page).
 2. Copy it to the host application's scripts folder:
-   - **After Effects**: `.../Adobe After Effects <version>/Scripts/` — run it from **File > Scripts**. Dockable panels (Create Face Rig, Marker Copy-Paste, Sync Shy Layers) can also go into `Scripts/ScriptUI Panels/` so they appear in the Window menu.
+   - **After Effects**: `.../Adobe After Effects <version>/Scripts/` — run it from **File > Scripts**. Dockable panels (Create Face Rig, Marker Copy-Paste, Sync Shy Layers, Zen Easy Rig) can also go into `Scripts/ScriptUI Panels/` so they appear in the Window menu.
    - **Illustrator**: `.../Adobe Illustrator <version>/Presets/<language>/Scripts/` — run it from **File > Scripts**.
 3. On macOS, enable **Settings > Scripting & Expressions > Allow Scripts to Write Files and Access Network** if a script needs file access.
 
@@ -32,6 +32,7 @@ Documentation in English and Spanish: https://zenzuke.com/scripts/
 | Simple Parent (Unparented Only) | Same, but skips layers that already have a parent so existing hierarchies are not broken. | [SimpleParent_Unparented.jsx](../../releases/latest/download/SimpleParent_Unparented.jsx) |
 | Sync Shy Layers | Dockable panel that synchronizes the shy status of layers from a source composition to targets, matched by name. | [SyncShyLayers.jsx](../../releases/latest/download/SyncShyLayers.jsx) |
 | Trim To Keys | Trims selected layers so their duration runs from their first to their last keyframe. | [TrimToKeys.jsx](../../releases/latest/download/TrimToKeys.jsx) |
+| Zen Easy Rig | Dockable rigging panel: two-bone IK on layers, points or paths; Head/Look face rig with an eye generator; Delay, Fan, Morph and Copy / paste controls. Every expression is short and commented. | [ZenEasyRig.jsx](AfterEffects/ZenEasyRig.jsx) |
 
 ### Illustrator
 
