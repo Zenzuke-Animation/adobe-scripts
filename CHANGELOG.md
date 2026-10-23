@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.2.0 — 2026-10-23
+
+- After Effects: **Zen Easy Rig** update.
+  - IK on 3 shape groups (or a shape layer that holds 3); the chain order is read from the drawings, and the hand group follows the controller's rotation.
+  - Puppet pin chain IK: select the Puppet effect (or its layer) to rig all its pins.
+  - Stroke IK: rounded elbows no longer loop or flip, and Flip Bend keeps the rounding.
+  - Morph: one shared slider for the whole selection, a small "Each" button for one slider per property, the time-based slider goes on the layer when everything is on one layer, and sliders/controllers get descriptive names.
+
 ## v1.1.0 — 2026-10-19
 
 - After Effects: new tool **Zen Easy Rig** (v1.0), a dockable rigging panel with IK, Face and Extras tabs.

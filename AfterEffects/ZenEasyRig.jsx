@@ -407,6 +407,19 @@
             "// rest shape = this path's own keyframes (FK)",
             "pts = points();  inT = inTangents();  outT = outTangents();",
             "n = pts.length;",
+            "",
+            "// Flip Bend changed since rigging: use the drawing mirrored across the shoulder-wrist line,",
+            "// so the elbow bends the other way and keeps its rounding",
+            "restFlip = " + (o.restFlip || 1) + ";   // bend direction the arm was drawn with",
+            "if (flip != restFlip) {",
+            "  S = pts[0];  ax = normalize(pts[n - 1] - S);",
+            "  for (i = 0; i < n; i++) {",
+            "    q = pts[i] - S;  pts[i] = S + ax * 2 * dot(q, ax) - q;",
+            "    inT[i] = ax * 2 * dot(inT[i], ax) - inT[i];",
+            "    outT[i] = ax * 2 * dot(outT[i], ax) - outT[i];",
+            "  }",
+            "}",
+            "",
             "A = pts[0];  B = pts[joint];  E = pts[n - 1];",
             "len1 = length(A, B);",
             "len2 = length(B, E);",
@@ -475,8 +488,233 @@
         cv.name = "Curve %";
         cv.property(1).setValue(100);
 
-        pathProp.expression = ZER.splineExpr({ ctrl: ctrl.name, joint: joint, ikfk: opt.ikfk, stretch: opt.stretch });
+        pathProp.expression = ZER.splineExpr({ ctrl: ctrl.name, joint: joint, ikfk: opt.ikfk, stretch: opt.stretch, restFlip: bend > 0 ? -1 : 1 });
         return ctrl;
+    };
+
+    // ------------------------------------------------------------------
+    // Group IK: 3 groups in the same shape layer (upper arm, forearm, hand).
+    // Groups can't be parented to each other, so each one gets its own
+    // Position / Rotation expression and moves like a bone.
+    // Put each group's Anchor Point on its joint (shoulder, elbow, wrist).
+    // ------------------------------------------------------------------
+
+    function groupTr(g, m) { return g.property("ADBE Vector Transform Group").property(m); }
+
+    // Where the solver lines need the shoulder and the controller, in the layer's own space.
+    function groupSolverLines(o) {
+        return [
+            "A = " + o.shoulderRef + ";   // shoulder (the upper group's position)",
+            "C = fromWorld(ctrl.toWorld(ctrl.anchorPoint));   // controller, in this layer",
+            "d = length(A, C);",
+            "raw = d;",
+            ""
+        ].concat(softLines(), [
+            o.stretch ? "stretch = 1 + Math.max(0, raw / d - 1) * ctrl.effect(\"Stretch\")(\"Checkbox\");" : "stretch = 1;",
+            "",
+            "// law of cosines: where the elbow and the wrist go",
+            "aim = Math.atan2(C[1] - A[1], C[0] - A[0]);",
+            "a = Math.acos(clamp((len1*len1 + d*d - len2*len2) / (2*len1*d), -1, 1));",
+            "up = aim - flip * a;   // upper bone angle",
+            "B = A + [Math.cos(up), Math.sin(up)] * len1 * stretch;   // elbow",
+            "E = A + [Math.cos(aim), Math.sin(aim)] * d * stretch;    // wrist",
+            "function wrap(r) { while (r > Math.PI) r -= 2*Math.PI; while (r < -Math.PI) r += 2*Math.PI; return r; }"
+        ]);
+    }
+
+    // part: "upperRot", "midPos", "midRot", "endPos", "endRot"
+    ZER.groupIKExpr = function (o, part) {
+        var lines = [
+            "// Zen Easy Rig - group IK (" + { upperRot: "upper rotation", midPos: "lower position", midRot: "lower rotation", endPos: "end position", endRot: "end rotation" }[part] + ")",
+            "ctrl = thisComp.layer(" + q(o.ctrl) + ");",
+            "len1 = " + num(o.len1) + ";   // upper bone length (px)",
+            "len2 = " + num(o.len2) + ";   // lower bone length (px)",
+            "rest1 = degreesToRadians(" + num(o.rest1 * 180 / Math.PI) + ");   // upper bone angle at rest",
+            "rest2 = degreesToRadians(" + num(o.rest2 * 180 / Math.PI) + ");   // lower bone angle at rest",
+            ""
+        ].concat(controlLines(o), [""], groupSolverLines(o), [""]);
+        if (part === "upperRot") lines.push("value + radiansToDegrees(wrap(up - rest1)) * blend;");
+        if (part === "midPos") lines.push("value + (B - value) * blend;");
+        if (part === "midRot" || (part === "endRot" && !o.endFollow)) lines.push("value + radiansToDegrees(wrap(Math.atan2(E[1] - B[1], E[0] - B[0]) - rest2)) * blend;   // turns with the lower bone");
+        if (part === "endRot" && o.endFollow) lines = lines.concat([
+            "// the hand turns with the forearm, or with the controller's rotation (End Follows Ctrl)",
+            "boneTurn = radiansToDegrees(wrap(Math.atan2(E[1] - B[1], E[0] - B[0]) - rest2));",
+            "c = ctrl.toWorldVec([1, 0]);  l = toWorldVec([1, 0]);   // controller and this layer, in the comp",
+            "ctrlTurn = radiansToDegrees(wrap(Math.atan2(c[1], c[0]) - Math.atan2(l[1], l[0]) - degreesToRadians(" + num(o.ctrlRest) + ")));   // controller rotation since rigging",
+            "follow = ctrl.effect(\"End Follows Ctrl\")(\"Slider\") / 100;",
+            "value + (boneTurn + (ctrlTurn - boneTurn) * follow) * blend;"
+        ]);
+        if (part === "endPos") lines.push("value + (E - value) * blend;");
+        return lines.join("\n");
+    };
+
+    ZER.createGroupIK = function (comp, groups, opt) {
+        if (groups.length !== 3) throw new Error("Select exactly 3 groups: upper, lower and end (e.g. arm, forearm, hand).");
+        var layer = layerOf(groups[0]);
+        // where a group sits: layer index + the chain of indices of the groups above it
+        function home(g) { var s = "", p = g.parentProperty; while (p.propertyDepth > 0) { s = p.propertyIndex + "/" + s; p = p.parentProperty; } return layerOf(g).index + ":" + s; }
+        for (var i = 1; i < 3; i++) {
+            if (layerOf(groups[i]).index !== layer.index) throw new Error("The 3 groups must be in the same shape layer.");
+            if (home(groups[i]) !== home(groups[0])) throw new Error("The 3 groups must sit side by side in the same Contents (not inside each other).");
+        }
+        // remember the groups by index (adding layers and expressions can invalidate references)
+        var parentPath = [], g = groups[0].parentProperty;
+        while (g.propertyDepth > 0) { parentPath.unshift(g.propertyIndex); g = g.parentProperty; }
+        function getGroup(idx) { var c = layer; for (var k = 0; k < parentPath.length; k++) c = c.property(parentPath[k]); return c.property(idx); }
+        var idx = [groups[0].propertyIndex, groups[1].propertyIndex, groups[2].propertyIndex];
+        var pos = [];
+        for (i = 0; i < 3; i++) pos.push(groupTr(groups[i], "ADBE Vector Position").value);
+        // the middle group is the one closest to the other two; of the two ends, the lower one in the timeline is the root
+        var best = 0, bestSum = Infinity;
+        for (i = 0; i < 3; i++) {
+            var sum = 0; for (var j = 0; j < 3; j++) if (j !== i) sum += dist(pos[i], pos[j]);
+            if (sum < bestSum) { bestSum = sum; best = i; }
+        }
+        // Which end is the shoulder? The upper arm's drawing reaches from its joint TOWARD the elbow,
+        // while the hand's drawing reaches AWAY from it. If that can't decide, the end higher in the timeline is the shoulder.
+        var ends = []; for (i = 0; i < 3; i++) if (i !== best) ends.push(i);
+        function towardMiddle(e) {
+            if (!parentPath.length || parentPath.length > 1) return 0;   // only for groups at the top of the layer
+            var b = shapeBounds(comp, layer, idx[e]);
+            var c = [b.left + b.width / 2, b.top + b.height / 2];
+            var v = [pos[best][0] - pos[e][0], pos[best][1] - pos[e][1]];
+            return ((c[0] - pos[e][0]) * v[0] + (c[1] - pos[e][1]) * v[1]) / Math.max(1e-6, Math.sqrt(v[0] * v[0] + v[1] * v[1]));
+        }
+        var t0 = towardMiddle(ends[0]), t1 = towardMiddle(ends[1]), rootI;
+        if (t0 > 1 && t1 <= 1) rootI = ends[0];
+        else if (t1 > 1 && t0 <= 1) rootI = ends[1];
+        else rootI = idx[ends[0]] < idx[ends[1]] ? ends[0] : ends[1];
+        var endI = rootI === ends[0] ? ends[1] : ends[0];
+        var order = [idx[rootI], idx[best], idx[endI]], P = [pos[rootI], pos[best], pos[endI]];
+        var len1 = dist(P[0], P[1]), len2 = dist(P[1], P[2]);
+        if (len1 < 0.5 || len2 < 0.5) throw new Error("Put each group's Anchor Point on its joint first: the groups' positions are on top of each other.");
+        var rest1 = Math.atan2(P[1][1] - P[0][1], P[1][0] - P[0][0]), rest2 = Math.atan2(P[2][1] - P[1][1], P[2][0] - P[1][0]);
+
+        // world points for the controller and the bend direction
+        var L = "thisComp.layer(" + layer.index + ")";
+        var Aw = evalInComp(comp, L + ".toWorld([" + P[0][0] + "," + P[0][1] + "])");
+        var Bw = evalInComp(comp, L + ".toWorld([" + P[1][0] + "," + P[1][1] + "])");
+        var Ew = evalInComp(comp, L + ".toWorld([" + P[2][0] + "," + P[2][1] + "])");
+        var bend = wrap180(angleDeg(Aw, Bw) - angleDeg(Aw, Ew));
+        var endName = getGroup(order[2]).name;
+        var ctrl = addIKController(comp, "CTRL IK " + endName, opt, Aw, Bw, Ew, bend, opt.endFollow);
+        ctrl.moveBefore(layer);
+        var ctrlRest = opt.endFollow ? worldAngle(comp, ctrl) - worldAngle(comp, layer) : 0;
+
+        // the Contents the 3 groups sit in, seen from any of their transform properties
+        var shoulderRef = "thisProperty.propertyGroup(3)(" + q(getGroup(order[0]).name) + ").transform.position";
+        var o = { ctrl: ctrl.name, len1: len1, len2: len2, rest1: rest1, rest2: rest2, ikfk: opt.ikfk, stretch: opt.stretch, shoulderRef: shoulderRef, endFollow: opt.endFollow, ctrlRest: ctrlRest };
+        groupTr(getGroup(order[0]), "ADBE Vector Rotation").expression = ZER.groupIKExpr(o, "upperRot");
+        groupTr(getGroup(order[1]), "ADBE Vector Position").expression = ZER.groupIKExpr(o, "midPos");
+        groupTr(getGroup(order[1]), "ADBE Vector Rotation").expression = ZER.groupIKExpr(o, "midRot");
+        groupTr(getGroup(order[2]), "ADBE Vector Position").expression = ZER.groupIKExpr(o, "endPos");
+        groupTr(getGroup(order[2]), "ADBE Vector Rotation").expression = ZER.groupIKExpr(o, "endRot");
+        return { ctrl: ctrl, order: [getGroup(order[0]).name, getGroup(order[1]).name, getGroup(order[2]).name] };
+    };
+
+    // ------------------------------------------------------------------
+    // Puppet pin chain IK: every pin of a Puppet effect, in pin order.
+    // Pin 1 = root, last pin = follows the controller, the middle pin = the elbow.
+    // Pins before the elbow move with the upper bone, pins after it with the lower bone.
+    // ------------------------------------------------------------------
+
+    function puppetPins(puppet) {
+        var deform = puppet.property("ADBE FreePin3 ARAP Group").property("ADBE FreePin3 Mesh Group").property(1).property("ADBE FreePin3 PosPins");
+        var pins = [];
+        for (var i = 1; i <= deform.numProperties; i++) {
+            var m = deform.property(i).name.match(/(\d+)$/);
+            pins.push({ index: i, name: deform.property(i).name, num: m ? parseInt(m[1], 10) : i });
+        }
+        pins.sort(function (a, b) { return a.num - b.num; });   // AE lists pins newest first
+        return pins;
+    }
+
+    ZER.pinChainExpr = function (o, k) {
+        var lines = [
+            "// Zen Easy Rig - puppet pin IK (pin " + (k + 1) + " of " + o.n + ")",
+            "ctrl = thisComp.layer(" + q(o.ctrl) + ");",
+            "A0 = [" + num(o.A0[0]) + ", " + num(o.A0[1]) + "];   // shoulder pin at rest",
+            "B0 = [" + num(o.B0[0]) + ", " + num(o.B0[1]) + "];   // elbow pin at rest",
+            "E0 = [" + num(o.E0[0]) + ", " + num(o.E0[1]) + "];   // end pin at rest",
+            "len1 = length(A0, B0);  len2 = length(B0, E0);",
+            ""
+        ].concat(controlLines(o), [
+            "",
+            "A = " + o.rootRef + ";   // the shoulder pin (can be animated)",
+            "C = fromWorld(ctrl.toWorld(ctrl.anchorPoint));   // controller, in this layer",
+            "d = length(A, C);",
+            "raw = d;",
+            ""
+        ], softLines(), [
+            o.stretch ? "stretch = 1 + Math.max(0, raw / d - 1) * ctrl.effect(\"Stretch\")(\"Checkbox\");" : "stretch = 1;",
+            "",
+            "// law of cosines: where the elbow and the end go",
+            "aim = Math.atan2(C[1] - A[1], C[0] - A[0]);",
+            "a = Math.acos(clamp((len1*len1 + d*d - len2*len2) / (2*len1*d), -1, 1));",
+            "up = aim - flip * a;",
+            "B = A + [Math.cos(up), Math.sin(up)] * len1 * stretch;",
+            "E = A + [Math.cos(aim), Math.sin(aim)] * d * stretch;",
+            "function ang(v) { return Math.atan2(v[1], v[0]); }",
+            "function rot(v, r) { return [v[0]*Math.cos(r) - v[1]*Math.sin(r), v[0]*Math.sin(r) + v[1]*Math.cos(r)]; }",
+            ""
+        ]);
+        if (k <= o.joint) lines.push("ik = A + rot(value - A0, ang(B - A) - ang(B0 - A0)) * stretch;   // moves with the upper bone");
+        else lines.push("ik = B + rot(value - B0, ang(E - B) - ang(E0 - B0)) * stretch;   // moves with the lower bone");
+        lines.push("value + (ik - value) * blend;");
+        return lines.join("\n");
+    };
+
+    ZER.createPinChainIK = function (comp, puppet, opt) {
+        var layer = layerOf(puppet), pins = puppetPins(puppet), n = pins.length;
+        if (n < 3) throw new Error("The Puppet effect needs 3 or more pins (shoulder, elbow, end). It has " + n + ".");
+        var puppetName = puppet.name;
+        function pinProp(p) {
+            return layer.property("ADBE Effect Parade").property(puppetName).property("ADBE FreePin3 ARAP Group").property("ADBE FreePin3 Mesh Group").property(1)
+                .property("ADBE FreePin3 PosPins").property(p.index).property("ADBE FreePin3 PosPin Position");
+        }
+        var rest = [];
+        for (var i = 0; i < n; i++) { var pp = pinProp(pins[i]); if (pp.expression !== "") throw new Error("\"" + pins[i].name + "\" already has an expression."); rest.push(pp.value); }
+        var joint = Math.floor((n - 1) / 2), A0 = rest[0], B0 = rest[joint], E0 = rest[n - 1];
+        if (dist(A0, B0) < 0.5 || dist(B0, E0) < 0.5) throw new Error("The pins sit on top of each other.");
+        var L = "thisComp.layer(" + layer.index + ")";
+        function w(p) { return evalInComp(comp, L + ".toWorld([" + p[0] + "," + p[1] + "])"); }
+        var Aw = w(A0), Bw = w(B0), Ew = w(E0);
+        var bend = wrap180(angleDeg(Aw, Bw) - angleDeg(Aw, Ew));
+        var ctrl = addIKController(comp, "CTRL IK " + layer.name + " " + pins[n - 1].name, opt, Aw, Bw, Ew, bend, false);
+        ctrl.moveBefore(layer);
+        var meshName = layer.property("ADBE Effect Parade").property(puppetName).property("ADBE FreePin3 ARAP Group").property("ADBE FreePin3 Mesh Group").property(1).name;
+        var rootRef = "effect(" + q(puppetName) + ").arap.mesh(" + q(meshName) + ").deform(" + q(pins[0].name) + ").position";
+        var o = { ctrl: ctrl.name, n: n, joint: joint, A0: A0, B0: B0, E0: E0, ikfk: opt.ikfk, stretch: opt.stretch, rootRef: rootRef };
+        for (i = 1; i < n; i++) pinProp(pins[i]).expression = ZER.pinChainExpr(o, i);
+        return { ctrl: ctrl, pins: n, joint: pins[joint].name };
+    };
+
+    // Create IK picks the right kind of IK from what is selected.
+    ZER.createIKFromSelection = function (comp, selLayers, sel, opt) {
+        var path = null, points = [], groups = [], i;
+        // a Puppet effect selected, or a single layer with a Puppet effect: chain IK on all its pins
+        for (i = 0; i < sel.length; i++) if (sel[i].matchName === "ADBE FreePin3") return ZER.createPinChainIK(comp, sel[i], opt);
+        if (!sel.length && selLayers.length === 1) {
+            var fxp = selLayers[0].property("ADBE Effect Parade");
+            if (fxp) for (i = 1; i <= fxp.numProperties; i++) if (fxp.property(i).matchName === "ADBE FreePin3") return ZER.createPinChainIK(comp, fxp.property(i), opt);
+        }
+        for (i = 0; i < sel.length && !path; i++) path = ZER.pathProp(sel[i]);
+        for (i = 0; i < sel.length; i++) {
+            if (ZER.isPointProp(sel[i])) points.push(sel[i]);
+            if (sel[i].matchName === "ADBE Vector Group") groups.push(sel[i]);
+        }
+        // one shape layer selected that holds exactly 3 groups: rig those groups
+        var one = selLayers.length === 1 ? selLayers[0] : null;
+        if (!groups.length && !path && !points.length && one && one.matchName === "ADBE Vector Layer") {
+            var rcO = one.property("ADBE Root Vectors Group"), gs = [];
+            for (i = 1; i <= rcO.numProperties; i++) if (rcO.property(i).matchName === "ADBE Vector Group") gs.push(rcO.property(i));
+            if (gs.length !== 3) throw new Error("\"" + one.name + "\" has " + gs.length + " groups. Select 3 groups (or a shape layer with exactly 3), or 3 layers.");
+            groups = gs;
+        }
+        if (groups.length) return ZER.createGroupIK(comp, groups, opt);
+        if (path) return ZER.createSplineIK(comp, path, opt);
+        if (points.length) return ZER.createPointIK(comp, points, opt);
+        return ZER.createIK(comp, selLayers, opt);
     };
 
     // Point properties among the selection (ignores groups and layers).
@@ -1060,38 +1298,70 @@
         return false;
     }
 
-    // props: keyframed properties. Face parts get the slider on the Look control, others on their own layer.
-    ZER.createMorph = function (comp, props, lookName) {
-        var list = [];
-        for (var i = 0; i < props.length; i++) if (props[i].propertyType === PropertyType.PROPERTY && props[i].canSetExpression) list.push(props[i]);
-        if (!list.length) throw new Error("Select a property with pose keyframes (e.g. a mouth Path).");
-        var made = [];
-        for (var k = 0; k < list.length; k++) {
-            var prop = list[k];
-            if (prop.numKeys < 2) throw new Error("\"" + prop.name + "\" needs 2 or more keyframes (one per pose).");
-            // a readable name: the group it sits in, or the layer
-            var label = layerOf(prop).name;
-            for (var g = prop.parentProperty; g && g.propertyDepth > 0; g = g.parentProperty) if (g.matchName === "ADBE Vector Group") { label = g.name; break; }
-            var face = isFacePart(prop) && layerByName(comp, lookName);
-            var host = face ? layerByName(comp, lookName) : layerOf(prop);
-            var fx = host.property("ADBE Effect Parade"), name = "Morph " + label, n = 2;
-            while (fx.property(name)) name = "Morph " + label + " " + n++;
-            var path = [], p2 = prop;   // remember the property (adding effects can invalidate references)
+    // Builds pose or time morphs. kind: "pose" or "time".
+    // separate = false: ONE shared slider for everything selected; true: one slider per property.
+    // Where a slider goes: CTRL Look if a face part is involved, the layer itself if all its
+    // properties are on one layer, otherwise a new CTRL Morph.
+    function makeMorphs(comp, props, lookName, ctrlType, kind, separate) {
+        var list = [], i;
+        for (i = 0; i < props.length; i++) if (props[i].propertyType === PropertyType.PROPERTY && props[i].canSetExpression && (props[i].numKeys > 0 || kind === "pose")) list.push(props[i]);
+        if (!list.length) throw new Error(kind === "pose" ? "Select a property with pose keyframes (e.g. a mouth Path)." : "Select keyframed properties (or their keyframes), on one or more layers.");
+        if (kind === "pose") for (i = 0; i < list.length; i++) if (list[i].numKeys < 2) throw new Error("\"" + list[i].name + "\" needs 2 or more keyframes (one per pose).");
+        // remember everything by index path (adding layers / effects can invalidate references)
+        var refs = [];
+        for (i = 0; i < list.length; i++) {
+            var path = [], p2 = list[i];
             while (p2.propertyDepth > 0) { path.unshift(p2.propertyIndex); p2 = p2.parentProperty; }
-            var propLayer = layerOf(prop);
+            var label = layerOf(list[i]).name;   // a readable name: the group it sits in, or the layer
+            for (var g = list[i].parentProperty; g && g.propertyDepth > 0; g = g.parentProperty) if (g.matchName === "ADBE Vector Group") { label = g.name; break; }
+            var pn = list[i].name === "Path" ? "" : list[i].name;   // "Rotation", "Opacity"... (a Path is named by its group)
+            refs.push({ layer: layerOf(list[i]), path: path, face: isFacePart(list[i]), label: label, prop: pn, t0: list[i].keyTime(1), t1: list[i].keyTime(list[i].numKeys) });
+        }
+        var sets = [];
+        if (separate) for (i = 0; i < refs.length; i++) sets.push([refs[i]]);
+        else sets.push(refs);
+        var made = [];
+        for (var s = 0; s < sets.length; s++) {
+            var set = sets[s], anyFace = false, oneLayer = true, t0 = Infinity, t1 = -Infinity;
+            for (i = 0; i < set.length; i++) {
+                if (set[i].face) anyFace = true;
+                if (set[i].layer.index !== set[0].layer.index) oneLayer = false;
+                t0 = Math.min(t0, set[i].t0); t1 = Math.max(t1, set[i].t1);
+            }
+            var host = anyFace ? layerByName(comp, lookName) : null;
+            if (!host && oneLayer) host = set[0].layer;
+            var newCtrl = false;
+            if (!host) { var p = worldPoint(comp, set[0].layer); host = ZER.makeController(comp, "CTRL Morph", ctrlType, [p[0], p[1] - 100], 60); newCtrl = true; }
+            // readable slider names: what it drives, e.g. "Morph Teeth Rotation" or "Morph Time Mouth"
+            var what = [];
+            for (i = 0; i < set.length; i++) {
+                var bits = [];
+                if (!(host.index === set[i].layer.index && set.length === 1 && set[i].prop)) bits.push(set[i].label);   // the layer name is redundant on its own layer
+                if (set[i].prop && set.length === 1) bits.push(set[i].prop);
+                var w = bits.join(" ");
+                var seen = false; for (var k2 = 0; k2 < what.length; k2++) if (what[k2] === w) seen = true;
+                if (w && !seen) what.push(w);
+            }
+            var label2 = what.join(" + ");
+            if (label2.length > 24) label2 = what[0] + " + " + (what.length - 1) + " more";
+            var base = (kind === "pose" ? "Morph" : "Morph Time") + (label2 ? " " + label2 : "");
+            if (newCtrl && label2) host.name = uniqueName(comp, "CTRL Morph " + label2);   // e.g. "CTRL Morph Teeth + Tongue"
+            var fx = host.property("ADBE Effect Parade"), name = base, n = 2;
+            while (fx.property(name)) name = base + " " + n++;
             var sl = fx.addProperty("ADBE Slider Control"); sl.name = name; sl.property(1).setValue(0);
-            var target = propLayer;
-            for (var j = 0; j < path.length; j++) target = target.property(path[j]);
-            target.expression = ZER.morphExpr(face ? "thisComp.layer(" + q(host.name) + ")" : "thisLayer", name);
+            for (i = 0; i < set.length; i++) {
+                var t = set[i].layer;
+                for (var j = 0; j < set[i].path.length; j++) t = t.property(set[i].path[j]);
+                var ref = host.index === set[i].layer.index ? "thisLayer" : "thisComp.layer(" + q(host.name) + ")";
+                t.expression = kind === "pose" ? ZER.morphExpr(ref, name) : ZER.morphTimeExpr(ref, name, t0 / comp.frameDuration, t1 / comp.frameDuration);
+            }
             made.push(host.name + " > " + name);
         }
         return made;
-    };
+    }
 
-    // Morph (time based): one slider plays many animations together, by frame number.
-    // The animations can be on different layers and at different times; the slider is the "time".
-    // The slider runs 0 - 100 (AE's default slider range) over all the selected keyframes:
-    // 0 = the first keyframe, 100 = the last one, so the whole slider is the whole animation.
+    // Morph (time based): the slider plays the animations together. It runs 0 - 100 (AE's default
+    // slider range) over the selected keyframes: 0 = the first keyframe, 100 = the last one.
     // (Scripts can't change a slider's range in AE, so the expression maps it instead.)
     ZER.morphTimeExpr = function (ctrlRef, sliderName, startFrame, endFrame) {
         return [
@@ -1103,35 +1373,14 @@
         ].join("\n");
     };
 
-    ZER.createTimeMorph = function (comp, props, lookName, ctrlType) {
-        var list = [], i;
-        for (i = 0; i < props.length; i++) if (props[i].propertyType === PropertyType.PROPERTY && props[i].canSetExpression && props[i].numKeys > 0) list.push(props[i]);
-        if (!list.length) throw new Error("Select keyframed properties (or their keyframes), on one or more layers.");
-        // remember them by index path (adding layers / effects can invalidate references)
-        var refs = [];
-        var anyFace = false, t0 = Infinity, t1 = -Infinity;
-        for (i = 0; i < list.length; i++) {
-            if (isFacePart(list[i])) anyFace = true;
-            t0 = Math.min(t0, list[i].keyTime(1));
-            t1 = Math.max(t1, list[i].keyTime(list[i].numKeys));
-            var path = [], p2 = list[i];
-            while (p2.propertyDepth > 0) { path.unshift(p2.propertyIndex); p2 = p2.parentProperty; }
-            refs.push({ layer: layerOf(list[i]), path: path });
-        }
-        var host = anyFace ? layerByName(comp, lookName) : null;
-        if (!host) {
-            var L0 = refs[0].layer, p = worldPoint(comp, L0);
-            host = ZER.makeController(comp, "CTRL Morph", ctrlType, [p[0], p[1] - 100], 60);
-        }
-        var fx = host.property("ADBE Effect Parade"), name = "Morph Time", n = 2;
-        while (fx.property(name)) name = "Morph Time " + n++;
-        var sl = fx.addProperty("ADBE Slider Control"); sl.name = name; sl.property(1).setValue(0);
-        for (i = 0; i < refs.length; i++) {
-            var t = refs[i].layer;
-            for (var j = 0; j < refs[i].path.length; j++) t = t.property(refs[i].path[j]);
-            t.expression = ZER.morphTimeExpr("thisComp.layer(" + q(host.name) + ")", name, t0 / comp.frameDuration, t1 / comp.frameDuration);
-        }
-        return host.name + " > " + name;
+    // Pose morph: returns a list of "host > slider".
+    ZER.createMorph = function (comp, props, lookName, separate, ctrlType) {
+        return makeMorphs(comp, props, lookName, ctrlType || "Null", "pose", !!separate);
+    };
+
+    // Time based morph: returns "host > slider" (several, comma separated, when separate).
+    ZER.createTimeMorph = function (comp, props, lookName, ctrlType, separate) {
+        return makeMorphs(comp, props, lookName, ctrlType || "Null", "time", !!separate).join(", ");
     };
 
     // Remove morph: takes the morph expressions off the selected properties (or every property
@@ -1526,7 +1775,7 @@
         var pFace = tabs.add("tab", undefined, "Face");
         var pExtra = tabs.add("tab", undefined, "Extras");
         tabs.selection = pIK;
-        pIK.add("statictext", undefined, "Select 3 layers (upper, lower, end),\n3 points (pins, effect points...)\nor 1 path with 3+ points", { multiline: true });
+        pIK.add("statictext", undefined, "Select 3 layers (upper, lower, end),\n3 shape groups (or a shape layer with 3),\n3 points (pins, effect points...)\nor 1 path with 3+ points", { multiline: true });
         pIK.alignChildren = ["left", "top"];
         var cbIKFK = pIK.add("checkbox", undefined, "IK / FK slider"); cbIKFK.value = true;
         var cbStretch = pIK.add("checkbox", undefined, "Stretch"); cbStretch.value = false;
@@ -1571,12 +1820,7 @@
                     soft: parseFloat(etSoft.text) || 0
                 };
                 if (!(comp instanceof CompItem)) throw new Error("Open a composition first.");
-                var path = null, sel = comp.selectedProperties;
-                for (var i = 0; i < sel.length && !path; i++) path = ZER.pathProp(sel[i]);
-                var points = ZER.selectedPoints(comp);
-                if (path) ZER.createSplineIK(comp, path, opt);
-                else if (points.length > 0) ZER.createPointIK(comp, points, opt);
-                else ZER.createIK(comp, comp.selectedLayers, opt);
+                ZER.createIKFromSelection(comp, comp.selectedLayers, comp.selectedProperties, opt);
             } catch (e) {
                 alert(e.message, "Zen Easy Rig");
             }
@@ -1779,20 +2023,35 @@
 
         var pMorph = section(pExtra, "Morph (poses from keyframes)", true);
         pMorph.add("statictext", undefined, "Select a property with one keyframe per pose:", { multiline: true });
-        var btMorph = pMorph.add("button", undefined, "Create Morph control");
-        btMorph.helpTip = "Adds a Morph slider: 0 = first keyframe pose, 1 = second... Face parts get it on the Look control, other layers on themselves.";
-        var btMorphT = pMorph.add("button", undefined, "Create Morph (Time based)");
-        btMorphT.helpTip = "Select keyframed properties on any layers. One Morph Time slider (in frames) plays them all together. Goes on the Look control if a face part is selected, otherwise on a new CTRL Morph.";
-        btMorphT.onClick = function () {
-            run("Morph (time)", function (comp) { ZER.createTimeMorph(comp, comp.selectedProperties, etLook.text, ctrlType()); });
-        };
+        pMorph.alignChildren = ["fill", "top"];
+        // a main button (one shared slider) with a small button on its right (one slider per property)
+        function morphRow(label, tip, tipEach) {
+            var g = pMorph.add("group");
+            g.alignChildren = ["fill", "center"];
+            g.spacing = 4;
+            var main = g.add("button", undefined, label);
+            main.alignment = ["fill", "center"];
+            main.helpTip = tip;
+            var each = g.add("button", undefined, "Each");
+            each.preferredSize.width = 44;
+            each.alignment = ["right", "center"];
+            each.helpTip = tipEach;
+            return { main: main, each: each };
+        }
+        var mPose = morphRow("Create Morph control",
+            "One Morph slider for everything selected: 0 = each property's first keyframe pose, 1 = its second... Goes on the Look control for face parts, on the layer if everything is on one layer, otherwise on a new CTRL Morph.",
+            "Same, but every selected property gets its own Morph slider.");
+        var mTime = morphRow("Create Morph (Time based)",
+            "One Morph Time slider plays everything selected together: 0 = first keyframe, 100 = last. Same placement as Create Morph control.",
+            "Same, but every selected property gets its own Morph Time slider, covering only its own keyframes.");
+        function poseMorph(each) { return function () { run("Morph control", function (comp) { ZER.createMorph(comp, comp.selectedProperties, etLook.text, each, ctrlType()); }); }; }
+        function timeMorph(each) { return function () { run("Morph (time)", function (comp) { ZER.createTimeMorph(comp, comp.selectedProperties, etLook.text, ctrlType(), each); }); }; }
+        mPose.main.onClick = poseMorph(false);  mPose.each.onClick = poseMorph(true);
+        mTime.main.onClick = timeMorph(false);  mTime.each.onClick = timeMorph(true);
         var btMorphX = pMorph.add("button", undefined, "Remove Morph");
         btMorphX.helpTip = "Takes the morph off the selected properties (or the selected layers), so you can fix the keyframes and re-create it. Unused Morph sliders are deleted.";
         btMorphX.onClick = function () {
             run("Remove morph", function (comp) { ZER.removeMorph(comp, comp.selectedProperties, comp.selectedLayers); });
-        };
-        btMorph.onClick = function () {
-            run("Morph control", function (comp) { ZER.createMorph(comp, comp.selectedProperties, etLook.text); });
         };
 
         var pCopy = section(pExtra, "Copy / paste controls", true);
