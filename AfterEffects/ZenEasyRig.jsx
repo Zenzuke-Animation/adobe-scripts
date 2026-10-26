@@ -1085,29 +1085,44 @@
         }
     };
 
+    // Controls that can exist once per eye ("Top Lid L", "Top Lid R"...). Convergence always stays shared.
+    var PER_EYE = ["Eye Opening", "Top Lid", "Bottom Lid", "Roundness", "Pupil Size", "Pupil Follow", "Pupils", "Eye Open"];
+    // Points an eye expression at that eye's own controls: effect("Top Lid") -> effect("Top Lid L").
+    function perEye(text, sfx) {
+        if (!sfx) return text;
+        for (var i = 0; i < PER_EYE.length; i++) text = text.split("effect(\"" + PER_EYE[i] + "\")").join("effect(\"" + PER_EYE[i] + sfx + "\")");
+        return text;
+    }
+
     // "Pupils" point control: moves the pupils directly (rests at [0,0]).
-    function addPupilPoint(ctrl) {
-        var fx = ctrl.property("ADBE Effect Parade");
-        if (fx.property("Pupils")) return;
+    function addPupilPoint(ctrl, sfx) {
+        var fx = ctrl.property("ADBE Effect Parade"), name = "Pupils" + (sfx || "");
+        if (fx.property(name)) return;
         var p = fx.addProperty("ADBE Point Control");
-        p.name = "Pupils";
+        p.name = name;
         p.property(1).setValue([0, 0]);
     }
 
-    function addEyeControls(ctrl, w) {
-        addPupilPoint(ctrl);
+    // sfx: "" for controls shared by both eyes, " L" / " R" for one eye's own controls
+    function addEyeControls(ctrl, w, sfx) {
+        sfx = sfx || "";
+        addPupilPoint(ctrl, sfx);
         var fx = ctrl.property("ADBE Effect Parade");
         var list = [["Eye Opening", w * 0.6], ["Top Lid", 100], ["Bottom Lid", 100], ["Roundness", w * 0.25], ["Pupil Size", w * 0.38], ["Pupil Follow", 0.4], ["Convergence", 0]];
         for (var i = 0; i < list.length; i++) {
-            if (fx.property(list[i][0])) continue;
+            var name = list[i][0] === "Convergence" ? "Convergence" : list[i][0] + sfx;
+            if (fx.property(name)) continue;
             var s = fx.addProperty("ADBE Slider Control");
-            s.name = list[i][0];
+            s.name = name;
             s.property(1).setValue(list[i][1]);
         }
     }
 
+    // " L" for "Eye L", " R" for "Eye R", " 3" for "Eye 3", "" for a lone "Eye"
+    function eyeSuffix(name) { var m = name.match(/^Eye (.+)$/); return m ? " " + m[1] : ""; }
+
     // Builds one eye group inside a shape layer.
-    function buildEye(layer, name, center, w, lashes, ctrlName, lookName, baseShape, side) {
+    function buildEye(layer, name, center, w, lashes, ctrlName, lookName, baseShape, side, sfx) {
         var eye = uniqueGroupName(layer, name);
         addGroup(rootContents(layer), eye);
         grp(layer, [eye]).property("ADBE Vector Transform Group").property("ADBE Vector Position").setValue(center);
@@ -1147,12 +1162,12 @@
 
         // expressions, now that everything exists
         var E = ZER.eyeExpr;
-        grp(layer, [eye, "White"]).property("ADBE Vectors Group").property("White Path").property("ADBE Vector Shape").expression = E.white(eye, ctrlName);
-        if (lashes > 0) grp(layer, [eye, "Lid"]).property("ADBE Vectors Group").property("Lid Path").property("ADBE Vector Shape").expression = E.lid(eye, ctrlName);
+        grp(layer, [eye, "White"]).property("ADBE Vectors Group").property("White Path").property("ADBE Vector Shape").expression = perEye(E.white(eye, ctrlName), sfx);
+        if (lashes > 0) grp(layer, [eye, "Lid"]).property("ADBE Vectors Group").property("Lid Path").property("ADBE Vector Shape").expression = perEye(E.lid(eye, ctrlName), sfx);
         grp(layer, [eye, "Pupil"]).property("ADBE Vectors Group").property("Clip").property("ADBE Vector Shape").expression = E.clip(eye);
         var dot = grp(layer, [eye, "Pupil", "Pupil Dot"]);
-        dot.property("ADBE Vector Transform Group").property("ADBE Vector Position").expression = E.pupilPos(ctrlName, lookName, side);
-        grp(layer, [eye, "Pupil", "Pupil Dot"]).property("ADBE Vectors Group").property(1).property("ADBE Vector Ellipse Size").expression = E.pupilSize(ctrlName);
+        dot.property("ADBE Vector Transform Group").property("ADBE Vector Position").expression = perEye(E.pupilPos(ctrlName, lookName, side), sfx);
+        grp(layer, [eye, "Pupil", "Pupil Dot"]).property("ADBE Vectors Group").property(1).property("ADBE Vector Ellipse Size").expression = perEye(E.pupilSize(ctrlName), sfx);
         for (i = 0; i < lashes; i++) {
             var tr = grp(layer, [eye, "Lash " + (i + 1)]).property("ADBE Vector Transform Group");
             tr.property("ADBE Vector Position").expression = E.lashPos(eye, progress[i]);
@@ -1203,7 +1218,13 @@
             ctrl = ZER.makeController(comp, "CTRL Eyes", o.ctrlType, [p[0], p[1] - w], 50);
             if (head) ctrl.parent = head;
         }
-        addEyeControls(ctrl, w);
+        // one shared set of eye sliders, or (perEye) one set per eye, made as each eye is built
+        if (!o.perEye) addEyeControls(ctrl, w, "");
+        function eye(layerX, nm, center, width, shape, side) {
+            var sfx = o.perEye ? eyeSuffix(nm) : "";
+            if (o.perEye) addEyeControls(ctrl, width, sfx);
+            return buildEye(layerX, nm, center, width, o.lashes, ctrl.name, look, shape, side, sfx);
+        }
 
         var layer = o.intoLayer, made = [];
         if (!layer && !(o.lines && o.lines.length)) {
@@ -1220,14 +1241,14 @@
             for (var i = 0; i < lines.length; i++) {
                 var nm = lines.length === 1 ? "Eye" : (i === 0 ? "Eye L" : (i === 1 ? "Eye R" : "Eye " + (i + 1)));
                 var sd = lines.length === 1 ? 0 : (i === 0 ? 1 : (i === lines.length - 1 ? -1 : 0));
-                made.push(buildEye(lines[i].layer, nm, lines[i].center, lines[i].width, o.lashes, ctrl.name, look, lines[i].shape, sd));
+                made.push(eye(lines[i].layer, nm, lines[i].center, lines[i].width, lines[i].shape, sd));
             }
             return { layer: lines[0].layer, ctrl: ctrl, eyes: made };
         }
 
         var off = o.both ? (w + o.gap) / 2 : 0;
-        made.push(buildEye(layer, o.both ? "Eye L" : "Eye", [-off, 0], w, o.lashes, ctrl.name, look, null, o.both ? 1 : 0));
-        if (o.both) made.push(buildEye(layer, "Eye R", [off, 0], w, o.lashes, ctrl.name, look, null, -1));
+        made.push(eye(layer, o.both ? "Eye L" : "Eye", [-off, 0], w, null, o.both ? 1 : 0));
+        if (o.both) made.push(eye(layer, "Eye R", [off, 0], w, null, -1));
         return { layer: layer, ctrl: ctrl, eyes: made };
     };
 
@@ -1614,7 +1635,7 @@
     };
 
     // eyeGroup is the name of the new group at the root of the layer.
-    function buildSimpleEye(comp, layer, eyeGroup, center, w, h, color, ctrl, look, pupil, pupilColor, side) {
+    function buildSimpleEye(comp, layer, eyeGroup, center, w, h, color, ctrl, look, pupil, pupilColor, side, sfx) {
         addGroup(rootContents(layer), eyeGroup);
         grp(layer, [eyeGroup]).property("ADBE Vector Transform Group").property("ADBE Vector Position").setValue(center);
         if (pupil) {
@@ -1633,7 +1654,7 @@
 
         var E = ZER.simpleEyeExpr, ref = "content(" + q(eyeGroup) + ").content(\"Eye Shape\").content(\"Rect\")";
         function rect() { return contentsOf(layer, [eyeGroup, "Eye Shape"]).property("Rect"); }
-        rect().property("ADBE Vector Rect Size").expression = E.size(ctrl, w, h);
+        rect().property("ADBE Vector Rect Size").expression = perEye(E.size(ctrl, w, h), sfx);
         rect().property("ADBE Vector Rect Roundness").expression = E.round();
         rect().property("ADBE Vector Rect Position").expression = [
             "// where the eye closes: 0 = top, 0.5 = middle, 1 = bottom",
@@ -1648,8 +1669,8 @@
             clip().property("ADBE Vector Rect Position").expression = ref + ".position;";
             clip().property("ADBE Vector Rect Roundness").expression = ref + ".roundness;";
             var dot = function () { return grp(layer, [eyeGroup, "Pupil", "Pupil Dot"]); };
-            dot().property("ADBE Vector Transform Group").property("ADBE Vector Position").expression = ZER.eyeExpr.pupilPos(ctrl, look, side);
-            dot().property("ADBE Vectors Group").property(1).property("ADBE Vector Ellipse Size").expression = ZER.eyeExpr.pupilSize(ctrl);
+            dot().property("ADBE Vector Transform Group").property("ADBE Vector Position").expression = perEye(ZER.eyeExpr.pupilPos(ctrl, look, side), sfx);
+            dot().property("ADBE Vectors Group").property(1).property("ADBE Vector Ellipse Size").expression = perEye(ZER.eyeExpr.pupilSize(ctrl), sfx);
         }
     }
 
@@ -1705,14 +1726,20 @@
             ctrl = ZER.makeController(comp, "CTRL Eyes", o.ctrlType, [p[0], p[1] - items[0].h], 50);
             if (head) ctrl.parent = head;
         }
-        var fx = ctrl.property("ADBE Effect Parade"), size = Math.min(items[0].w, items[0].h);
-        if (o.pupil) addPupilPoint(ctrl);
-        var list = [["Eye Open", 100], ["Pupil Size", items[0].pupilSize || size * 0.5], ["Pupil Follow", 0.3], ["Convergence", 0]];
-        for (i = 0; i < list.length; i++) {
-            if (!o.pupil && i > 0) break;
-            if (fx.property(list[i][0])) continue;
-            var s = fx.addProperty("ADBE Slider Control"); s.name = list[i][0]; s.property(1).setValue(list[i][1]);
+        var fx = ctrl.property("ADBE Effect Parade");
+        // the sliders: one shared set, or (perEye) one set per eye with " L" / " R" (or " 1", " 2"...) on the end
+        function simpleControls(it, sfx) {
+            var size = Math.min(it.w, it.h);
+            if (o.pupil) addPupilPoint(ctrl, sfx);
+            var list = [["Eye Open", 100], ["Pupil Size", it.pupilSize || size * 0.5], ["Pupil Follow", 0.3], ["Convergence", 0]];
+            for (var c = 0; c < list.length; c++) {
+                if (!o.pupil && c > 0) break;
+                var name = list[c][0] === "Convergence" ? "Convergence" : list[c][0] + sfx;
+                if (fx.property(name)) continue;
+                var sl = fx.addProperty("ADBE Slider Control"); sl.name = name; sl.property(1).setValue(list[c][1]);
+            }
         }
+        if (!o.perEye) simpleControls(items[0], "");
 
         // left / right side of each eye (for Convergence): compare world x to the middle of all eyes
         var midX = 0;
@@ -1729,7 +1756,12 @@
             else for (var k = 1; k <= rc.numProperties; k++) rc.property(k).enabled = false;
             var nm = uniqueGroupName(x.layer, "Rig " + x.name);
             var side = items.length < 2 ? 0 : (x.wx < midX ? 1 : -1);
-            buildSimpleEye(comp, x.layer, nm, x.center, x.w, x.h, x.color, ctrl.name, look, o.pupil, x.pupilColor, side);
+            var sfx = "";
+            if (o.perEye && items.length > 1) {
+                sfx = items.length === 2 ? (side === 1 ? " L" : " R") : " " + (i + 1);
+                simpleControls(x, sfx);
+            } else if (o.perEye) simpleControls(x, "");
+            buildSimpleEye(comp, x.layer, nm, x.center, x.w, x.h, x.color, ctrl.name, look, o.pupil, x.pupilColor, side, sfx);
             made.push(nm);
         }
         return { ctrl: ctrl, groups: made };
@@ -1922,12 +1954,16 @@
         var etLashes = g4.add("edittext", undefined, "3"); etLashes.characters = 3;
         var cbBoth = pEyes.add("checkbox", undefined, "Both eyes"); cbBoth.value = true;
         var cbInto = pEyes.add("checkbox", undefined, "Add into the selected shape layer");
+        var cbEyesSep = pEyes.add("checkbox", undefined, "Separate controls per eye");
+        cbEyesSep.helpTip = "Off: one set of sliders moves both eyes. On: each eye gets its own (Top Lid L, Top Lid R...). Convergence stays shared.";
         var btEyes = pEyes.add("button", undefined, "Create Eyes");
 
         var pSimple = section(pFace, "Simple eyes (from your drawing)", false);
         pSimple.alignChildren = ["left", "top"];
         pSimple.add("statictext", undefined, "Select eye layers or eye groups:", { multiline: true });
         var cbPupil = pSimple.add("checkbox", undefined, "With pupil"); cbPupil.value = false;
+        var cbSimpleSep = pSimple.add("checkbox", undefined, "Separate controls per eye");
+        cbSimpleSep.helpTip = "Off: one Eye Open (and pupil sliders) for all eyes. On: each eye gets its own (Eye Open L, Eye Open R...).";
         var btSimple = pSimple.add("button", undefined, "Make Simple Eyes");
         btSimple.helpTip = "Same size and colour as your drawing, as a rounded rectangle that blinks (CTRL Eyes > Eye Open). Your drawing is switched off, not deleted.";
 
@@ -1984,7 +2020,7 @@
                     if (cbBoth.value && paths.length === 1 && !confirm("\"Both eyes\" is ticked but only one line is selected.\n\nMake just one eye from it?", false, "Zen Easy Rig")) return;
                     var lines = [];
                     for (i = 0; i < paths.length; i++) lines.push(ZER.eyeLineFromPath(paths[i]));
-                    ZER.createEyes(comp, { width: lines[0].width, lashes: Math.max(0, Math.round(numOf(etLashes, 3))), lines: lines, ctrlType: ctrlType() });
+                    ZER.createEyes(comp, { width: lines[0].width, lashes: Math.max(0, Math.round(numOf(etLashes, 3))), lines: lines, ctrlType: ctrlType(), perEye: cbEyesSep.value });
                     return;
                 }
                 var into = null;
@@ -1994,13 +2030,13 @@
                     into = s[0];
                 }
                 ZER.createEyes(comp, { width: numOf(etW, 120), gap: numOf(etGap, 60), lashes: Math.max(0, Math.round(numOf(etLashes, 3))),
-                    both: cbBoth.value, intoLayer: into, ctrlType: ctrlType() });
+                    both: cbBoth.value, intoLayer: into, ctrlType: ctrlType(), perEye: cbEyesSep.value });
             });
         };
 
         btSimple.onClick = function () {
             run("Simple eyes", function (comp) {
-                ZER.createSimpleEyes(comp, ZER.faceTargets(comp), { pupil: cbPupil.value, ctrlType: ctrlType() });
+                ZER.createSimpleEyes(comp, ZER.faceTargets(comp), { pupil: cbPupil.value, ctrlType: ctrlType(), perEye: cbSimpleSep.value });
             });
         };
 

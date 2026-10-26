@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.2.1 — 2026-10-26
+
+- After Effects: **Zen Easy Rig** update.
+  - Eyes: new "Separate controls per eye" option in Create Eyes and Make Simple Eyes, so each eye gets its own sliders (Top Lid L / R, Eye Open L / R…) to wink or move one pupil. Convergence stays shared.
+
 ## v1.2.0 — 2026-10-23
 
 - After Effects: **Zen Easy Rig** update.
